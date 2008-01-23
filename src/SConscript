@@ -1,0 +1,35 @@
+import os
+Import( 'baseEnv' )
+
+OCUFiles = [
+    'OCU.cpp',
+    'JuniorAPI.cpp',
+    'JrSockets.cpp',
+    'JuniorMgr.cpp',
+    'OS.cpp'
+]
+
+RTE_Files =[
+    'JuniorRTE.cpp',
+    'JrSockets.cpp',
+    'JUDPTransport.cpp',
+    'OS.cpp'
+]
+if os.name == "nt":  
+	libs =['WSock32.lib']
+else:
+	libs = []
+	
+
+# Generate both the OCU and Robot test programs
+ocuapp = baseEnv.Program( target = 'ocu',
+                           source = OCUFiles,
+                           LIBS = libs )
+
+rteapp = baseEnv.Program( target = 'JuniorRTE',
+                           source = RTE_Files,
+                           LIBS = libs )
+
+
+baseEnv.Install( baseEnv['INSTALL_BINDIR'], ocuapp )
+baseEnv.Install( baseEnv['INSTALL_BINDIR'], rteapp )
