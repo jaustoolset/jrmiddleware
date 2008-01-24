@@ -38,9 +38,13 @@ int main(int argc, char* argv[])
     unsigned long sender;
     unsigned short datasize;
 
+    // Broadcast a message, announcing our availability.
+    broadcast(handle, 0, buffer, 15);
+
     // Do stuff
     while(1)
     {
+        // Create a random message size.
         srand(JrRandomValue());
         do
         {
@@ -56,25 +60,27 @@ int main(int argc, char* argv[])
 //            sprintf(buffer, "Urgent broadcast %d.\0", ++counter);
 //            broadcast(handle, strlen(buffer), buffer, 15);
 
+
+            // Send a message of the given size, with a counter and size element
+            // included
+            *((int*)buffer) = ++counter;
+            *((unsigned short*) &buffer[4]) = datasize;
+            printf("Sending message %ld (size=%ld)\n", counter, datasize);
             if (int result = sendto(handle, dest, datasize, buffer, 6, 1) != 0)
                 printf("Sendto failed (%d)\n", result);
-            //printf("Sending broadcast\n");
-            //sprintf(buffer, "Urgent broadcast %d.\0", ++counter);
-            //broadcast(handle, strlen(buffer), buffer, 15);
-            //printf("Back from broadcast\n");
-
         }
 
         // check for incoming messages
-        for (int i=0; i<100; i++)
+        for (int i=0; i<50; i++)
         {
             int ret = recvfrom(handle, &sender, MaxBufferSize, buffer, NULL);
             if (ret > 0)
             {
-                //std::string incoming_data(buffer, ret);
-                //printf("Incoming Msg: %s (sender = %ld)\n", incoming_data.c_str(), sender);
-                if (ret != datasize) printf("Error: Received wrong message size (sent=%d, recd=%d)\n", datasize, ret);
-                printf("Incoming Msg: Sender = %ld, Size = %ld)\n", sender, ret);
+                // Pull off the data that was embedded in teh message.
+                int msgcount = *((int*) buffer);
+                unsigned short size = *((unsigned short*) &buffer[4]);
+                if (size != ret) printf("WARNING: SIZE INCONSISTENT (msg=%ld, buffer=%ld)\n", size, ret);
+                printf("Incoming Msg: Sender = %ld, Count = %ld, Size = %ld)\n", sender, msgcount, ret);
             }
 
             JrSleep(50);
