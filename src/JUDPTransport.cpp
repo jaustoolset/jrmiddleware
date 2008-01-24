@@ -169,12 +169,12 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
 
 Transport::TransportError JUDPTransport::recvMsg(Message& msg)
 {
-    char buffer[4096];
+    char buffer[5000];
 
     // Check the socket for a message
     struct sockaddr_in source;
     int source_length = sizeof(source);
-    int result = recvfrom(_socket, buffer, 4096, 0,
+    int result = recvfrom(_socket, buffer, 5000, 0,
                           (struct sockaddr*) &source, &source_length);
     if (result <= 0)
     {
