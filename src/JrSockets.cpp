@@ -171,9 +171,13 @@ Transport::TransportError JrSocket::broadcastMsg(Message& msg)
     }
     else
     {
-        // Loop through all known destinations, sending the message to each.
+        // Loop through all known destinations, sending the message to
+        // each socket that matches the destination (including wildcards).
         for (int i = 0; i < _map.getList().size(); i++)
-            sendMsg(msg, _map.getList()[i].second);
+        {
+            if (msg.getDestinationId() == _map.getList()[i].first)
+                sendMsg(msg, _map.getList()[i].second);
+        }
     }
     return Ok;
 }
