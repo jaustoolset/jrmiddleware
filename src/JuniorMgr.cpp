@@ -67,6 +67,9 @@ void JuniorMgr::checkLargeMsgBuffer()
                 // continue the interior "while" loop until we find a missing
                 // message or the true end.
                 if ((*nextMsg)->getDataControlFlag() != 8) continue;
+//printf("Reconstructing message.  Original seq num = %ld (size=%ld, contol=%ld)\n", 
+//       (*msgIter)->getSequenceNumber(), (*msgIter)->getPayload().getArchiveLength(),
+//       (*msgIter)->getDataControlFlag());
 
                 // Getting to this point means we know that all the messages
                 // in a sequence are available.  Reconstruct the original message.
@@ -75,9 +78,13 @@ void JuniorMgr::checkLargeMsgBuffer()
                     nextMsg = searchMsgList(_largeMsgBuffer,
                                 (*msgIter)->getSourceId(), (*msgIter)->getSequenceNumber()+i);
                     (*msgIter)->getPayload().append( (*nextMsg)->getPayload() );
+//printf("Adding message.  Next seq num = %ld (size=%ld, flags=%ld)\n", 
+//       (*nextMsg)->getSequenceNumber(), (*nextMsg)->getPayload().getArchiveLength(), (*nextMsg)->getDataControlFlag());
+
                     delete (*nextMsg);
                     _largeMsgBuffer.erase(nextMsg);
                 }
+//                printf("Total message size: %ld\n", (*msgIter)->getPayload().getArchiveLength());
 
                 // Now that we have a complete message, add it to the delivery buffer
                 // and remove it from the unfinished message buffer.
@@ -194,7 +201,7 @@ int JuniorMgr::sendto( unsigned long destination,
             // While waiting, we need to process other messages.
             Message* incoming = new Message(0);
             int counter;
-            for (counter = 1; counter < 150; counter++)
+            for (counter = 1; counter < 400; counter++)
             {
                 JrSleep(1);
                 Transport::TransportError ret = _socket_ptr->recvMsg(*incoming);
@@ -223,18 +230,15 @@ int JuniorMgr::sendto( unsigned long destination,
                 // seems wonky to have to do, but it's part of JAUS.
                 if (msg.getDataControlFlag() == 2) msg.setDataControlFlag(4);
 
-                // Every 50 milliseconds, resend the message.  At the 100 millisecond
+                // Every 100 milliseconds, resend the message.  At the 200 millisecond
                 // mark, use a broadcast on the hopes that we can find the destination.
-                if ((counter % 100) == 0) msg.setMessageCode(BroadcastMsg);
-                if ((counter % 50) == 0) _socket_ptr->sendMsg(msg);
+                if ((counter % 200) == 0) msg.setMessageCode(BroadcastMsg);
+                if ((counter % 100) == 0) _socket_ptr->sendMsg(msg);
             }
             
             // If we didn't successfully receive a acknowledgement, we
             // return an error.
-            if (counter == 150) 
-            {
-                return Transport::Failed;
-            }
+            if (counter == 400) return Transport::Failed;
         }
         //printf("Looping with bytes_sent = %ld, size = %ld\n", bytes_sent, size);
     } while(bytes_sent < size);  // continue to loop until we've sent
