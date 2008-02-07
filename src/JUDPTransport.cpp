@@ -97,6 +97,9 @@ void JUDPTransport::packHdr(JUDPArchive& packed_msg)
 
 Transport::TransportError JUDPTransport::sendMsg(Message& msg)
 {
+    // Assume the worst...
+    Transport::TransportError result = AddrUnknown;
+
     //
     // Get the destination id from the message.  
     //
@@ -153,8 +156,10 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
                        inet_ntoa( *(struct in_addr*) &dest.sin_addr.s_addr ),
                        htons(dest.sin_port));
                 printf("Sendto failed with errno=%d\n", errno);
-                return Failed;
+                result = Failed;
             }
+            else
+                result = Ok;
     
         }
     }
@@ -163,7 +168,7 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
     // so we need to restore it before returning.  In most cases,
     // this will do nothing.
     msg.setDestinationId( destId );
-    return Ok;
+    return result;
 }
 
 

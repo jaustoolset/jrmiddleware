@@ -87,14 +87,14 @@ Transport::TransportError JrSocket::sendMsg(Message& msg, SocketId sockname)
 
 Transport::TransportError JrSocket::sendMsg(Message& msg)
 {
-    Transport::TransportError result = Ok;
+    Transport::TransportError result = AddrUnknown;
 
     // If the socket is connected, the endpoint is pre-specified.
     // We can send the archive without much fuss.
     if (is_connected)
     {
         // Send it to the connected socket
-        sendMsg(msg, connected_dest);
+        result = sendMsg(msg, connected_dest);
     }
     else
     {
@@ -108,7 +108,7 @@ Transport::TransportError JrSocket::sendMsg(Message& msg)
                 //&&(msg.getSourceId() != _map.getList()[i].first))
             {
                 msg.setDestinationId(_map.getList()[i].first);
-                sendMsg(msg, _map.getList()[i].second);
+                result = sendMsg(msg, _map.getList()[i].second);
             }
         }
 
@@ -116,7 +116,7 @@ Transport::TransportError JrSocket::sendMsg(Message& msg)
         msg.setDestinationId( dest );
     }
 
-    return Ok;
+    return result;
 }
 
 Transport::TransportError JrSocket::recvMsg(Message& msg)

@@ -85,11 +85,16 @@ int main(int argc, char* argv[])
                 {
                     //printf("Got P2p message (data size = %ld)\n", msg.getDataLength());
                     // Send this message to the recipients on any transport.
+                    Transport::TransportError result = Transport::AddrUnknown;
                     for (_iter = _transports.begin(); _iter != _transports.end(); ++_iter)
                     {
-                        (*_iter)->sendMsg(msg);
+                        result = (*_iter)->sendMsg(msg);
                     }
-                    break;
+
+                    // If we did not find a match for the P2P destination, result will
+                    // be AddrUnknown.  In this case, fall through to the broadcast, as we'll
+                    // try to send to this message across the multicast channel.
+                    if (result != Transport::AddrUnknown) break;
                 }
 
                 case BroadcastMsg:

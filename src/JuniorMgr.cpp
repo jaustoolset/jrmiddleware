@@ -67,9 +67,6 @@ void JuniorMgr::checkLargeMsgBuffer()
                 // continue the interior "while" loop until we find a missing
                 // message or the true end.
                 if ((*nextMsg)->getDataControlFlag() != 8) continue;
-//printf("Reconstructing message.  Original seq num = %ld (size=%ld, contol=%ld)\n", 
-//       (*msgIter)->getSequenceNumber(), (*msgIter)->getPayload().getArchiveLength(),
-//       (*msgIter)->getDataControlFlag());
 
                 // Getting to this point means we know that all the messages
                 // in a sequence are available.  Reconstruct the original message.
@@ -78,13 +75,9 @@ void JuniorMgr::checkLargeMsgBuffer()
                     nextMsg = searchMsgList(_largeMsgBuffer,
                                 (*msgIter)->getSourceId(), (*msgIter)->getSequenceNumber()+i);
                     (*msgIter)->getPayload().append( (*nextMsg)->getPayload() );
-//printf("Adding message.  Next seq num = %ld (size=%ld, flags=%ld)\n", 
-//       (*nextMsg)->getSequenceNumber(), (*nextMsg)->getPayload().getArchiveLength(), (*nextMsg)->getDataControlFlag());
-
                     delete (*nextMsg);
                     _largeMsgBuffer.erase(nextMsg);
                 }
-//                printf("Total message size: %ld\n", (*msgIter)->getPayload().getArchiveLength());
 
                 // Now that we have a complete message, add it to the delivery buffer
                 // and remove it from the unfinished message buffer.
