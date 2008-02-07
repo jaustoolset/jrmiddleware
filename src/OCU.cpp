@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
         }
 
         // check for incoming messages
-        for (int i=0; i<50; i++)
+        for (int i=0; i<10; i++)
         {
             int ret = recvfrom(handle, &sender, MaxBufferSize, buffer, NULL);
             if (ret > 0)
