@@ -9,8 +9,6 @@
 #include <stdlib.h>
 
 typedef std::pair<JAUS_ID, unsigned short> MsgId;
-typedef std::list<Message*> MessageList;
-typedef std::list<Message*>::iterator MessageListIter;
 const unsigned short MsgHistory = 50;
 
 class JuniorMgr
@@ -21,15 +19,13 @@ public:
     ~JuniorMgr();
 
     // The public functions mirror the API equivalents.
-    int sendto( unsigned long destination, unsigned int size, 
+    JrErrorCode sendto( unsigned long destination, unsigned int size, 
                 const char* buffer, int priority, int flags);
 
-    int broadcast( unsigned int bufsize, const char* buffer, int priority);
-
-    int recvfrom( unsigned long* sender, unsigned int bufsize,
+    JrErrorCode recvfrom( unsigned long* sender, unsigned int* bufsize,
                   char* buffer, int* priority);
 
-    int connect(unsigned long id);
+    JrErrorCode connect(unsigned long id);
 
 private:
 

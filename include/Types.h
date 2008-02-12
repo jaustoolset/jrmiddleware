@@ -57,17 +57,17 @@ class JAUS_ID
         if (val != in.val) return true;
         return false;
     }
+    bool containsWildcards()
+    {
+        // Each byte may have a wildcard (0xFF), so we need to check each
+        for (char i=0; i<4; i++)
+            if (getByte(val, i) == 0xFF) return true;
+        return false;
+    }
 };
 
 // Message Code
 typedef unsigned short MessageCode;
-
-// List of message codes
-const unsigned short RequestConnection = 0x01;
-const unsigned short AcceptConnection  = 0x02;
-const unsigned short P2P_Message       = 0x03;
-const unsigned short BroadcastMsg      = 0x04;
-
 
 #endif
 

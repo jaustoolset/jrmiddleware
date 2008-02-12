@@ -57,6 +57,10 @@ int main(int argc, char* argv[])
     else
         _transports.push_back(&udp);
 
+    // Predefine a list of messages we receive from the transports.
+    MessageList msglist;
+    Message* msg;
+
     // Process messages.
     while(1)
     {
@@ -64,52 +68,59 @@ int main(int argc, char* argv[])
         JrSleep(1);
 
         // Check the public socket for outgoing requests
-        Message msg(0);
-        if (publicSocket.recvMsg(msg) == Transport::Ok)
+        publicSocket.recvMsg(msglist);
+        while (!msglist.empty())
         {
-            // Process the message request
-            switch (msg.getMessageCode())
-            {
-                case RequestConnection:
-                {
-                    // Send back a connection accept notice
-                    printf("Received connection request for %ld\n", msg.getSourceId().val);
-                    Message response(AcceptConnection);
-                    response.setDestinationId(msg.getSourceId());
-                    publicSocket.sendMsg(response);
-                    _clients.push_back(msg.getSourceId().val);
-                    break;
-                }
+            // Get the first message from the list
+            msg = msglist.front();
+            msglist.pop_front();
 
-                case P2P_Message:
+            // Process the message request
+            if (msg->getDestinationId().val == 0)
+            {
+                // This message was intended for the RTE, and therefore must
+                // be a connection request.  Response appropriately.
+                printf("Received connection request for %ld\n", msg->getSourceId().val);
+                Message response;
+                response.setSourceId(0);
+                response.setDestinationId(msg->getSourceId());
+                publicSocket.sendMsg(response);
+                _clients.push_back(msg->getSourceId().val);
+            }
+            else 
+            {
+                // If the destination contains no wildcards, try to send it
+                // as a point-to-point message.
+                bool matchFound = false;
+                if (!msg->getDestinationId().containsWildcards())
                 {
-                    //printf("Got P2p message (data size = %ld)\n", msg.getDataLength());
                     // Send this message to the recipients on any transport.
-                    Transport::TransportError result = Transport::AddrUnknown;
                     for (_iter = _transports.begin(); _iter != _transports.end(); ++_iter)
                     {
-                        result = (*_iter)->sendMsg(msg);
+                        Transport::TransportError result = (*_iter)->sendMsg(*msg);
+                        if (result != Transport::AddrUnknown) matchFound = true;
                     }
 
-                    // If we did not find a match for the P2P destination, result will
-                    // be AddrUnknown.  In this case, fall through to the broadcast, as we'll
-                    // try to send to this message across the multicast channel.
-                    if (result != Transport::AddrUnknown) break;
+                    // If we don't have an entry in our address book, broadcast this message.
+                    // First set the ack/nak bit, though, so that if we do find the endpoint
+                    // we can learn its address.
+                    if (!matchFound) msg->setAckNakFlag(1);
                 }
 
-                case BroadcastMsg:
+                // If the destination contains wildcards, or we didn't find
+                // a match, broadcast it.
+                if (msg->getDestinationId().containsWildcards() || !matchFound)
                 {
                     // Send this message to all recipients on all transports.
                     for (_iter = _transports.begin(); _iter != _transports.end(); ++_iter)
                     {
-                        (*_iter)->broadcastMsg(msg);
+                        (*_iter)->broadcastMsg(*msg);
                     }
-                    break;
                 }
-
-                default:
-                    printf("Unknown message received (code=%d).\n", msg.getMessageCode());
             }
+
+            // Done with this message.
+            delete msg;
         }
 
         // Now check receive messages on all other transports
@@ -117,15 +128,20 @@ int main(int argc, char* argv[])
         {
             // Don't check the socket in this loop, since we already did it.
             if (_iter == _transports.begin()) continue;
-            if ((*_iter)->recvMsg(msg) == Transport::Ok)
+            (*_iter)->recvMsg(msglist);
+            while (!msglist.empty())
             {
+                // Get the first message from the list
+                msg = msglist.front();
+                msglist.pop_front();
+
                 // If this message is intended for a local client (and a 
                 // local client only), send it only on the socket interface.
-                if (std::find(_clients.begin(), _clients.end(), msg.getSourceId().val) !=
+                if (std::find(_clients.begin(), _clients.end(), msg->getSourceId().val) !=
                     _clients.end())
                 {
                     // Match found.  Send to the socket interface.
-                    publicSocket.sendMsg(msg);
+                    publicSocket.sendMsg(*msg);
                 }
                 else
                 {
@@ -135,8 +151,11 @@ int main(int argc, char* argv[])
                     //printf("Received message from %ld to %ld\n", msg.getSourceId().val, msg.getDestinationId().val);
                     for ( std::list<Transport*>::iterator tport = _transports.begin(); 
                         tport != _transports.end(); ++tport)
-                          (*tport)->sendMsg(msg);
+                          (*tport)->sendMsg(*msg);
                 }
+
+                // Done processing this message
+                delete msg;
             }
         }
     }

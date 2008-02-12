@@ -6,11 +6,16 @@
 #include "Archive.h"
 #include "Types.h"
 
+class Message;
+typedef std::list<Message*> MessageList;
+typedef std::list<Message*>::iterator MessageListIter;
+
+
 class Message
 {
 public:
-    Message(MessageCode code):
-            _code(code),_source(0),_destination(0), _priority(6), 
+    Message():
+            _code(0),_source(0),_destination(0), _priority(6), 
             _acknak(0), _control(0), _payload(){}
    ~Message(){}
 

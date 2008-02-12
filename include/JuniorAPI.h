@@ -4,30 +4,30 @@
 #define __JUNIOR_API_H
 
 // Convenient typedefs, enumerations and constants
-typedef enum {Ok, NoMessages, InitFailed, AddrUnknown, Timeout, UnknownError} ErrorCode;
+typedef enum {Ok, NoMessages, InvalidID, Overflow, InitFailed, AddrUnknown, Timeout, UnknownError} JrErrorCode;
 const unsigned char GuarenteeDelivery = 0x01;
 const int JrMaxPriority = 15;
 
 // Functional interface
-int sendto(int handle,
+JrErrorCode sendto(int handle,
            unsigned long destination, 
            unsigned int size, 
            const char* buffer,
            int priority,
            int flags);
 
-int recvfrom(int handle,
+JrErrorCode recvfrom(int handle,
              unsigned long* source,
-             unsigned int bufsize,
+             unsigned int* bufsize,
              char* buffer,
              int* priority);
 
-int broadcast(int handle,
+JrErrorCode broadcast(int handle,
               unsigned int bufsize,
               const char* buffer,
               int priority);
 
-int connect(unsigned long id);
+JrErrorCode connect(unsigned long id, int* handle);
 
 #endif
 

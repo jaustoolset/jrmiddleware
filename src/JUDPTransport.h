@@ -35,7 +35,7 @@ public:
     // All functions are abstract
     TransportError sendMsg(Message& msg);
     TransportError broadcastMsg(Message& msg);
-    TransportError recvMsg(Message& msg);
+    TransportError recvMsg(MessageList& msglist);
     TransportError initialize(std::string config);
 
 protected:

@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 // Functional interface
-int sendto(int handle,
+JrErrorCode sendto(int handle,
            unsigned long destination, 
            unsigned int bufsize, 
            const char* buffer,
@@ -21,7 +21,7 @@ int sendto(int handle,
     return (mgr->sendto(destination, bufsize, buffer, priority, flags));
 }
 
-int broadcast(int handle,
+JrErrorCode broadcast(int handle,
               unsigned int bufsize,
               const char* buffer,
               int priority)
@@ -30,12 +30,12 @@ int broadcast(int handle,
     JuniorMgr* mgr = (JuniorMgr*) handle;
 
     // Call the recv function of the manager.
-    return (mgr->broadcast(bufsize, buffer, priority));
+    return (mgr->sendto(0xFFFFFFFF, bufsize, buffer, priority, 0));
 }
 
-int recvfrom(int handle,
+JrErrorCode recvfrom(int handle,
              unsigned long* sender,
-             unsigned int bufsize,
+             unsigned int* bufsize,
              char* buffer,
              int* priority)
 {
@@ -46,8 +46,11 @@ int recvfrom(int handle,
     return (mgr->recvfrom(sender, bufsize, buffer, priority));
 }
 
-int connect(unsigned long id)
+JrErrorCode connect(unsigned long id, int* handle)
 {
+    if (handle == NULL)
+        return InitFailed;
+
     // Spawn the RTE.  Note that hte spawn process will 
     // ensure that we don't create a duplicate.
     JrSpawnProcess("JuniorRTE");
@@ -56,13 +59,13 @@ int connect(unsigned long id)
     // Create and initialize Junior Manager, to manage this 
     // connection to the RTE.  
     JuniorMgr* mgr = new JuniorMgr();
-    if (mgr->connect(id) != Transport::Ok)
+    JrErrorCode ret = mgr->connect(id);
+    if (ret != Ok)
     {
-        printf("Failed to establish connection with the Run-Time Engine...\n");
         delete mgr;
-        return 0;
+        *handle = -1;
     }
-    
-    // A pointer to this object is then returned as a handle
-    return ((int) mgr);
+    else
+        *handle = (int)mgr;
+    return ret;
 }

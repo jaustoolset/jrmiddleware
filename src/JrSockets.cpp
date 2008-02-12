@@ -33,24 +33,24 @@ SocketId JrSocket::OpenMailslot(std::string name)
 }
 #endif
 
-void JrSocket::openResponseChannel(Message& msg)
+void JrSocket::openResponseChannel(Message* msg)
 {
 #ifdef WINDOWS
     // For Windows, we need to open a mailslot back to the sender, if we
     // don't already have it.
     SocketId sockname;
-    if (_map.getAddrFromId(msg.getSourceId(), sockname) == false)
+    if (_map.getAddrFromId(msg->getSourceId(), sockname) == false)
     {
-        std::stringstream s; s << msg.getSourceId().val;
+        std::stringstream s; s << msg->getSourceId().val;
         HANDLE source = OpenMailslot(s.str());
         if (source != INVALID_HANDLE_VALUE) 
-            _map.addAddress(msg.getSourceId(), source);
+            _map.addAddress(msg->getSourceId(), source);
     }
 #else
     // For Unix, we just use the ID as the name of the socket.
     // The AddressMap class will prevent duplicates.
-    std::stringstream s; s << SOCK_PATH; s << msg.getSourceId().val;
-    _map.addAddress(msg.getSourceId(), s.str());
+    std::stringstream s; s << SOCK_PATH; s << msg->getSourceId().val;
+    _map.addAddress(msg->getSourceId(), s.str());
 #endif
 }
 
@@ -115,11 +115,10 @@ Transport::TransportError JrSocket::sendMsg(Message& msg)
         // Restore the initial destination identifier before we return.
         msg.setDestinationId( dest );
     }
-
     return result;
 }
 
-Transport::TransportError JrSocket::recvMsg(Message& msg)
+Transport::TransportError JrSocket::recvMsg(MessageList& msglist)
 {
     // Recv the message into a finite sized buffer
     char buffer[4096];
@@ -149,16 +148,22 @@ Transport::TransportError JrSocket::recvMsg(Message& msg)
     // Now that we have a datagram in our buffer, unpack it.
     if (bytes > 0)
     {
-        //printf("SOCKET: recv'ed %d bytes\n", bytes);
-        // Found a message.  Unpack it.
+        // Found a message.  Put it in an archive...
         Archive archive;
         archive.setData(buffer, bytes);
-        msg.unpack(archive);
+
+        // And unpack it...
+        Message* msg = new Message();
+        msg->unpack(archive);
 
         // If we're not a connected socket, open a response
         // channel to the sender so we can talk to it later.
         if (!is_connected) openResponseChannel(msg);
+
+        // Add the message to the MessageList and return
+        msglist.push_back(msg);
     }
+
     return Transport::Ok;
 }
 

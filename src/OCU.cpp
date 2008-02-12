@@ -30,7 +30,12 @@ int main(int argc, char* argv[])
     }
 
     // Connect to the Run-Time Engine
-    int handle = connect(myid);
+    int handle;
+    if (connect(myid, &handle) != Ok)
+    {
+        printf("Init failed.  Terminating execution\n");
+        return -1;
+    }
 
     // Make a data buffer for incoming/outgoing messages.
     char buffer[MaxBufferSize];
@@ -39,7 +44,7 @@ int main(int argc, char* argv[])
     unsigned short datasize;
 
     // Broadcast a message, announcing our availability.
-    broadcast(handle, 0, buffer, 15);
+    //broadcast(handle, 0, buffer, 15);
 
     // Do stuff
     while(1)
@@ -66,21 +71,23 @@ int main(int argc, char* argv[])
             *((int*)buffer) = ++counter;
             *((unsigned short*) &buffer[4]) = datasize;
             printf("Sending message %ld (size=%ld)\n", counter, datasize);
-            if (int result = sendto(handle, dest, datasize, buffer, 6, 1) != 0)
+            JrErrorCode result = sendto(handle, dest, datasize, buffer, 6, 1);
+            if ( result != Ok)
                 printf("Sendto failed (%d)\n", result);
         }
 
         // check for incoming messages
         for (int i=0; i<10; i++)
         {
-            int ret = recvfrom(handle, &sender, MaxBufferSize, buffer, NULL);
-            if (ret > 0)
+            unsigned int buffersize = MaxBufferSize;
+            JrErrorCode ret = recvfrom(handle, &sender, &buffersize, buffer, NULL);
+            if (ret == Ok)
             {
                 // Pull off the data that was embedded in teh message.
                 int msgcount = *((int*) buffer);
                 unsigned short size = *((unsigned short*) &buffer[4]);
-                if (size != ret) printf("WARNING: SIZE INCONSISTENT (msg=%ld, buffer=%ld)\n", size, ret);
-                printf("Incoming Msg: Sender = %ld, Count = %ld, Size = %ld)\n", sender, msgcount, ret);
+                if (size != buffersize) printf("WARNING: SIZE INCONSISTENT (msg=%ld, buffer=%ld)\n", size, buffersize);
+                printf("Incoming Msg: Sender = %ld, Count = %ld, Size = %ld)\n", sender, msgcount, buffersize);
             }
 
             JrSleep(50);

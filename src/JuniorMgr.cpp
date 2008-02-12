@@ -20,7 +20,8 @@ unsigned int JuniorMgr::umin(unsigned int x, unsigned int y)
 
 void JuniorMgr::sendAckMsg( Message* incoming ) 
 {
-    Message response(incoming->getMessageCode());
+    Message response;
+    response.setMessageCode(incoming->getMessageCode());
     response.setSourceId(_id);
     response.setDestinationId(incoming->getSourceId());
     response.setSequenceNumber(incoming->getSequenceNumber());
@@ -108,6 +109,13 @@ void JuniorMgr::checkLargeMsgBuffer()
 
 bool JuniorMgr::addMsgToBuffer(Message* msg)
 {
+    // If this is an ack/nak response message, disregard it.
+    if ((msg->getAckNakFlag() == 2) || msg->getAckNakFlag() == 3)
+    {
+        delete msg;
+        return false;
+    }
+
     // Before adding to the buffer, make sure it isn't a duplicate
     // of one we just processed.
     if (std::find(_recentMsgs.begin(), _recentMsgs.end(),
@@ -147,19 +155,38 @@ bool JuniorMgr::addMsgToBuffer(Message* msg)
     return true;
 }
 
-int JuniorMgr::sendto( unsigned long destination, 
+JrErrorCode JuniorMgr::sendto( unsigned long destination, 
                        unsigned int size, 
                        const char* buffer,
                        int priority,
                        int flags)
 {
+    // Check for degenerate case
+    if (destination == 0) return InvalidID;
+
+    // If the destination identifier contains wildcard characters,
+    // we need to route the message as a broadcast instead of a unicast.
+    JAUS_ID destId(destination);
+    if (destId.containsWildcards())
+    {
+        // This is a broadcast, so make sure we turn off ack/nak, 
+        // and we meet the size limit (broadcasts cannot be parsed into
+        // multiple packets.
+        flags = 0;
+        if (size > 4079)
+        {
+            printf("Broadcast of buffers larger than 4079 bytes is not supported\n");
+            return Overflow;
+        }
+    }
+
     // We can never send more than 4079 bytes in a single
     // message, so break up large data sets.
     unsigned int bytes_sent = 0;
     do
     {
         // Create the message
-        Message msg(P2P_Message);
+        Message msg;
         msg.setDestinationId(destination);
         msg.setSourceId(_id);
         msg.setPriority(priority);
@@ -192,30 +219,32 @@ int JuniorMgr::sendto( unsigned long destination,
             // We need to wait for an acknowledgement.  Note that we wait a maximum of
             // 150 milliseconds, and retransmit the original message every 50 milliseconds.
             // While waiting, we need to process other messages.
-            Message* incoming = new Message(0);
-            int counter;
-            for (counter = 1; counter < 400; counter++)
+            MessageList msglist;
+            int counter = 0; bool acked = false;
+            while ((counter < 400) && !acked)
             {
                 JrSleep(1);
-                Transport::TransportError ret = _socket_ptr->recvMsg(*incoming);
-                if (ret == Transport::Ok)
+                Transport::TransportError ret = _socket_ptr->recvMsg(msglist);
+                while (!msglist.empty())
                 {
+                    Message* incoming = msglist.front();
+                    msglist.pop_front();
+
                     // Found a message.  Form a response if ACK/NAK selected.
                     if (incoming->getAckNakFlag() == 1) sendAckMsg( incoming );
 
-                    // Check if this is an acknowledgement
+                    // Check if this is the acknowledgement we've been waiting for.
                     if ((incoming->getAckNakFlag() == 3) && 
-                        (incoming->getSequenceNumber() == msg.getSequenceNumber()))
+                        (incoming->getSequenceNumber() == msg.getSequenceNumber()) )
                     {
                         delete incoming;
-                        break;
+                        acked = true;
                     }
-
-                    // Put the incoming message in the buffer
-                    addMsgToBuffer(incoming);
-     
-                    // Since we had a message, allocate buffer for a new one
-                    incoming = new Message(0);
+                    else
+                    {
+                        // Put the incoming message in the buffer
+                        addMsgToBuffer(incoming);
+                    }
                 }
 
                 // If we have to resend a message that is part of a large data
@@ -223,50 +252,23 @@ int JuniorMgr::sendto( unsigned long destination,
                 // seems wonky to have to do, but it's part of JAUS.
                 if (msg.getDataControlFlag() == 2) msg.setDataControlFlag(4);
 
-                // Every 100 milliseconds, resend the message.  At the 200 millisecond
-                // mark, use a broadcast on the hopes that we can find the destination.
-                if ((counter % 200) == 0) msg.setMessageCode(BroadcastMsg);
+                // Every 100 milliseconds, resend the message.
+                counter++;
                 if ((counter % 100) == 0) _socket_ptr->sendMsg(msg);
             }
             
             // If we didn't successfully receive a acknowledgement, we
             // return an error.
-            if (counter == 400) return Transport::Failed;
+            if (counter == 400) return Timeout;
         }
         //printf("Looping with bytes_sent = %ld, size = %ld\n", bytes_sent, size);
     } while(bytes_sent < size);  // continue to loop until we've sent
                                  // the entire buffer.
-    return Transport::Ok;
+    return Ok;
 }
 
-int JuniorMgr::broadcast( unsigned int bufsize,
-                          const char* buffer,
-                          int priority )
-{
-    // Make sure we're within size limits.  Broadcasting of large datasets is
-    // not permitted.
-    if (bufsize > 4079)
-    {
-        printf("Broadcast of buffers larger than 4079 bytes is not supported\n");
-        return Transport::Failed;
-    }
-
-    // Create the message
-    Message msg(BroadcastMsg);
-    msg.setSourceId(_id);
-    msg.setDestinationId(0xFFFFFFFF);
-    msg.setPriority(priority);
-    msg.setAckNakFlag(0);
-    msg.setSequenceNumber(++_message_counter);
-    msg.setPayload(bufsize, buffer);
-
-    // Send the message to the RTE for distribution
-    _socket_ptr->broadcastMsg(msg);
-    return 0;
-}
-
-int JuniorMgr::recvfrom(unsigned long* sender,
-                        unsigned int bufsize,
+JrErrorCode JuniorMgr::recvfrom(unsigned long* sender,
+                        unsigned int* bufsize,
                         char* buffer,
                         int* priority)
 {
@@ -274,23 +276,26 @@ int JuniorMgr::recvfrom(unsigned long* sender,
     // we don't spin too long in this function.
     for (int i=0; i < 10; i++)
     {
-        Message* msg = new Message(0);
-        Transport::TransportError ret = _socket_ptr->recvMsg(*msg);
-        if (ret != Transport::Ok)
+        MessageList msglist;
+        Transport::TransportError ret = _socket_ptr->recvMsg(msglist);
+        if ((ret != Transport::Ok) || (msglist.empty()))
         {
-            // No messages.  Break the loop early.  We also
-            // have to free the buffer we pre-allocated.
-            delete msg;
+            // No messages.  Break the loop early.  
             break;
         }
 
-        // Found a message.  Form a response if ACK/NAK selected.
-        if (msg->getAckNakFlag() == 1) sendAckMsg( msg );
+        while (!msglist.empty())
+        {
+            // Extract the message from the list
+            Message* msg = msglist.front();
+            msglist.pop_front();
 
-        // If this is an extra acknowledgement, disregard it.  Otherwise,
-        // put it in the priority based buffer.
-        if ((msg->getAckNakFlag() != 2) && msg->getAckNakFlag() != 3)
+            // Found a message.  Form a response if ACK/NAK selected.
+            if (msg->getAckNakFlag() == 1) sendAckMsg( msg );
+
+            // Add this message to a priority buffer
             addMsgToBuffer(msg);
+        }
     }
 
     // Check each priority based buffer (highest first) looking for a message
@@ -309,22 +314,40 @@ int JuniorMgr::recvfrom(unsigned long* sender,
             unsigned int data_size; char* data_ptr;
             value->getPayload(data_size, data_ptr);
 
+            // Make sure our buffer is big enough to hold the entire message
+            JrErrorCode ret = Ok;
+            if (*bufsize < data_size)
+            {
+                printf("RECV: Buffer too small (buf=%ld, data=%ld)\n", bufsize, data_size);
+                ret = Overflow;
+            }
+            else
+                *bufsize = data_size;
+
             // Copy over the data to the user supplied buffer, 
-            // making sure not to copy more than the given size.
-            if (bufsize < data_size) printf("RECV: Buffer too small (buf=%ld, data=%ld)\n", bufsize, data_size);
-            unsigned int copy_size = umin(bufsize, data_size);
-            memcpy( buffer, data_ptr, copy_size);
+            memcpy( buffer, data_ptr, *bufsize);
             delete value;
-            return copy_size;
+            return ret;
         }
     }
 
     // Getting to this point means we have no messages to return.
-    return 0;
+    return NoMessages;
 }
 
-int JuniorMgr::connect(unsigned long id)
+JrErrorCode JuniorMgr::connect(unsigned long id)
 {
+    // Check for degenerate value
+    if (id == 0) return InvalidID;
+
+    // Make sure the ID doesn't contain any wildcards.
+    JAUS_ID jausId(id);
+    if (jausId.containsWildcards())
+    {
+        printf("Client ID may not contain wildcards (0xFF).  Returning error...\n");
+        return InvalidID;
+    }
+
     // The name of our local socket is the string form of our ID.
     std::stringstream name; name << id;
 
@@ -332,9 +355,9 @@ int JuniorMgr::connect(unsigned long id)
     JrSocket* mySocket = new JrSocket;
     if (mySocket->initialize(name.str()) != Transport::Ok)
     {
-        printf("Failed to open a local socket.  Return error...\n");
+        printf("Failed to open a local socket.  Returning error...\n");
         delete mySocket;
-        return -1;
+        return InitFailed;
     }
 
     // We only send to the RTE, so we can explicitly connect
@@ -342,20 +365,27 @@ int JuniorMgr::connect(unsigned long id)
 
     // Send a connection request.  This will cause the RTE
     // to look for private traffic on a socket with the Identifier name.
-    Message msg(RequestConnection);
+    Message msg;
     msg.setSourceId(id);
     mySocket->sendMsg(msg);
     printf("API: Sending connection request to RTE...\n");
 
     // Wait for a connection accept message
-    Message response(0);
-    while (1)
+    MessageList msglist;
+    bool connected = false;
+    while (!connected)
     {
-        if (mySocket->recvMsg(response) == Transport::Ok) 
+        mySocket->recvMsg(msglist);
+        while (!msglist.empty())
         {
-            if (response.getMessageCode() == AcceptConnection)
+            Message* response = msglist.front();
+            msglist.pop_front();
+            if (response->getSourceId().val == 0)
+            {
+                connected = true;
                 printf("API: Connection to RTE accepted and open...\n");
-            break;
+            }
+            delete response;
         }
         JrSleep(1);
     }

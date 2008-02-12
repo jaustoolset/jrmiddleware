@@ -21,7 +21,7 @@ public:
 
     // All functions are abstract
     virtual TransportError sendMsg(Message& msg) = 0;
-    virtual TransportError recvMsg(Message& msg) = 0;
+    virtual TransportError recvMsg(MessageList& msglist) = 0;
     virtual TransportError broadcastMsg(Message& msg) = 0;
     virtual TransportError initialize(std::string config) = 0;
 

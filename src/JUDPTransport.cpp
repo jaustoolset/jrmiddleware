@@ -2,12 +2,9 @@
 
 #include "JUDPTransport.h"
 #include "Message.h"
-//#include <netdb.h>
-//#include <arpa/inet.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
-//#include <sys/socket.h>
 
 
 JUDPTransport::JUDPTransport():
@@ -172,7 +169,7 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
 }
 
 
-Transport::TransportError JUDPTransport::recvMsg(Message& msg)
+Transport::TransportError JUDPTransport::recvMsg(MessageList& msglist)
 {
     char buffer[5000];
 
@@ -234,12 +231,16 @@ Transport::TransportError JUDPTransport::recvMsg(Message& msg)
     // Extract the payload into a message
     Archive archive;
     archive.setData( raw_msg.getJausMsgPtr(), jausMsgLength );
-    msg.unpack(archive);
+    Message* msg = new Message();
+    msg->unpack(archive);
 
     //
     // Add the source to the transport discovery map.
     //
-    _map.addAddress( msg.getSourceId(), sourceAddr );
+    _map.addAddress( msg->getSourceId(), sourceAddr );
+
+    // Add the message to the list
+    msglist.push_back(msg);
 
     return Ok;
 }

@@ -23,7 +23,7 @@ public:
 
     // All functions are abstract
     TransportError sendMsg(Message& msg);
-    TransportError recvMsg(Message& msg);
+    TransportError recvMsg(MessageList& msglist);
     TransportError broadcastMsg(Message& msg);
     TransportError initialize(std::string source);
     TransportError setDestination(std::string destination);
@@ -35,7 +35,7 @@ protected:
     TransportError sendMsg(Message& msg, SocketId dest);
 
     // Helper function to open a return channel
-    void openResponseChannel(Message& msg);
+    void openResponseChannel(Message* msg);
 
     // Internal variables
     bool                 is_connected;
