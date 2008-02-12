@@ -15,6 +15,7 @@ JUDPTransport::JUDPTransport():
 {
 }
 
+static std::map< unsigned long, Archive> Messages;
 
 
 JUDPTransport::~JUDPTransport()
@@ -214,34 +215,45 @@ Transport::TransportError JUDPTransport::recvMsg(MessageList& msglist)
         return NoMessages;
     }
 
-    //
-    // Handle header compression
-    //
-    uncompressHeader( raw_msg, sourceId, source );
+    // A single JUDP packet may have multiple JAUS messages on it, each
+    // with there own header compression flags.  We need to parse through
+    // the entire packet, remove each message one at a time and
+    // adding it to the return list.
+    while (raw_msg.getArchiveLength() > 1)
+    {
+        // Handle header compression
+        uncompressHeader( raw_msg, sourceId, source );
 
-    //
-    // If the message length is zero, this message was only a transport
-    // message (probably a Header Compression message).  Nothing more
-    // to do.
-    unsigned short jausMsgLength;
-    raw_msg.getMsgLength( jausMsgLength );
-    if ( jausMsgLength == 0)
-        return NoMessages;
+        // If the message length is zero, this message was only a transport
+        // message (probably a Header Compression message).  Nothing more
+        // to do.
+        unsigned short jausMsgLength;
+        raw_msg.getMsgLength( jausMsgLength );
+        if ( jausMsgLength != 0 )
+        {
+            // Extract the payload into a message
+            // UGH!! Two copies here.  Need to eliminate this.
+            Archive archive;
+            archive.setData( raw_msg.getJausMsgPtr(), jausMsgLength );
+            Message* msg = new Message();
+            msg->unpack(archive);
 
-    // Extract the payload into a message
-    Archive archive;
-    archive.setData( raw_msg.getJausMsgPtr(), jausMsgLength );
-    Message* msg = new Message();
-    msg->unpack(archive);
+            //
+            // Add the source to the transport discovery map.
+            //
+            _map.addAddress( msg->getSourceId(), sourceAddr );
 
-    //
-    // Add the source to the transport discovery map.
-    //
-    _map.addAddress( msg->getSourceId(), sourceAddr );
+            // Add the message to the list
+            msglist.push_back(msg);
+        }
 
-    // Add the message to the list
-    msglist.push_back(msg);
+        // Remove this message from the JUDP archive, so
+        // we can process the next message in the packet.
+        raw_msg.removeAt(1, 4+jausMsgLength);
+    }
 
+    // If we didn't find any message, return NoMessage.  Otherwise, Ok.
+    if (msglist.empty()) return NoMessages;
     return Ok;
 }
 
