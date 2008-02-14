@@ -321,7 +321,7 @@ void JUDPTransport::compressHeader( JUDPArchive& packed_msg,
 {
     // Check for a special case.  If we're broadcasting
     // the messsage, don't try to compress anything 
-    if (destId == 0xFFFFFFFF) return ;
+    if (destId.containsWildcards()) return ;
 
     // Header compression is handled within the table.
     _outTable.compress( destId, packed_msg );
