@@ -80,7 +80,7 @@ inline void HeaderCompressionTable::compress( JAUS_ID id,
         // Propose compression of the JAUS header.
         //printf("Proposing new HC compression: %ld\n", counter+1);
         archive.setHCNumber( ++counter );
-        archive.setHCLength( 16 );
+        archive.setHCLength( 14 );
         archive.setHCFlags( 1 );
 
         // New entry.  Create and populate a table entry
@@ -88,7 +88,7 @@ inline void HeaderCompressionTable::compress( JAUS_ID id,
     }
     else if (entry->flags == 1)
     {
-        //printf("Found existing entry in HC table.  Reproposing...\n");
+        //printf("Found existing entry in HC table.  Reproposing...(%ld bytes)\n", entry->length);
         // Found an existing table entry but destination has not
         // yet acceptable compression.  Re-propose.
         archive.setHCNumber( entry->number );
