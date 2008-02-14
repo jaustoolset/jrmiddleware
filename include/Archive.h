@@ -241,17 +241,16 @@ inline void Archive::insertAt( int index, Archive& archive )
     // If necessary, grow the buffer to accommodate the new data
     growBuffer(data_length + length);
 
-    // Data length must increase
-    data_length += length;
-
     // Shift the tail data backward to create an empty region in the buffer
     char* temp_data = (char*) malloc( buffer_size );
-    memcpy( temp_data, &data[index], length );
-    memcpy( &data[index+length], temp_data, length ); 
+    int tail_size = data_length - index;
+    memcpy( temp_data, &data[index], tail_size );
+    memcpy( &data[index+length], temp_data, tail_size ); 
     free(temp_data);
     
     // insert the stuff from the new archive
     memcpy( &data[index], archive.getArchive(), length );
+    data_length += length;
 }
 
 inline void Archive::removeAt( int index, int length )
