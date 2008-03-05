@@ -10,12 +10,12 @@ void JrSleep(unsigned long milliseconds)
 #endif
 }
 
-void JrSpawnProcess(std::string path)
+void JrSpawnProcess(std::string path, std::string arg)
 {
 #ifdef WINDOWS
     // Windows gives us the createProcess function.  We just need to
     // make sure it doesn't already exist.
-    char cmd[50];
+    char cmd[500];
     //memset(cmd, 0, 50);
     sprintf(cmd, "tasklist | findstr %s\0", path.c_str());
     int ret = system(cmd);
@@ -27,7 +27,8 @@ void JrSpawnProcess(std::string path)
         PROCESS_INFORMATION pi;
         memset(&si, 0, sizeof(STARTUPINFO)); si.cb = sizeof(si);
         memset(&pi, 0, sizeof(PROCESS_INFORMATION));
-        BOOL result = CreateProcess(  NULL, LPSTR(path.c_str()), NULL, NULL, FALSE, 
+        sprintf(cmd, "%s %s\0", path.c_str(), arg.c_str());
+        BOOL result = CreateProcess(  NULL, LPSTR(cmd), NULL, NULL, FALSE, 
             NORMAL_PRIORITY_CLASS, NULL,  NULL,  &si, &pi);
         if(result == 0)  printf("Could not create process (%s)\n", path.c_str());
     }
@@ -44,20 +45,20 @@ void JrSpawnProcess(std::string path)
         // No JuniorRTE found.  Start a new process...
         printf("Starting Junior Run-Time Engine...\n");
         if (fork()==0)
-           execl(path.c_str(),0);
+           execl(path.c_str(), path.c_str(), arg.c_str(), NULL);
     }
 
 #endif
 }
 
-unsigned long JrRandomValue()
+// Return the current time (in seconds)
+unsigned long JrGetTimestamp()
 {
 #ifdef WINDOWS
-    return GetTickCount();
+    return (unsigned long)(GetTickCount()/1000);
 #else
     return (unsigned long)(time(NULL));
 #endif
 }
-
 
 

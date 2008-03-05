@@ -6,14 +6,16 @@ OCUFiles = [
     'JuniorAPI.cpp',
     'JrSockets.cpp',
     'JuniorMgr.cpp',
-    'OS.cpp'
+    'OS.cpp',
+    'ConfigData.cpp'
 ]
 
 RTE_Files =[
     'JuniorRTE.cpp',
     'JrSockets.cpp',
     'JUDPTransport.cpp',
-    'OS.cpp'
+    'OS.cpp',
+    'ConfigData.cpp'
 ]
 if os.name == "nt":  
 	libs =['WSock32.lib']
@@ -33,3 +35,4 @@ rteapp = baseEnv.Program( target = 'JuniorRTE',
 
 baseEnv.Install( baseEnv['INSTALL_BINDIR'], ocuapp )
 baseEnv.Install( baseEnv['INSTALL_BINDIR'], rteapp )
+baseEnv.Install( baseEnv['INSTALL_BINDIR'], 'junior.cfg' )

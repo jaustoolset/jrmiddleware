@@ -66,9 +66,6 @@ class JAUS_ID
     }
 };
 
-// Message Code
-typedef unsigned short MessageCode;
-
 #endif
 
 

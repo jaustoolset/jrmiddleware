@@ -3,7 +3,6 @@
 #define __JAUS_UDP_TRANSPORT_H
 
 #include "Transport.h"
-//#include "IPMap.h"
 #include "HeaderCompression.h"
 #include "AddressMap.h"
 
@@ -40,16 +39,17 @@ public:
 
 protected:
 
-    AddressMap<IP_ADDRESS> _map;
-    int   _socket;
-    HeaderCompressionTable _inTable, _outTable;
+    AddressMap<IP_ADDRESS>  _map;
+    int                     _socket;
+    HeaderCompressionTable  _inTable, _outTable;
+    IP_ADDRESS              _multicastAddr;
 
     // Internal function to help with packing the transport header
     void packHdr( JUDPArchive& packed_msg );
 
     // Internal functions to help with compression
-    void uncompressHeader( JUDPArchive&, JAUS_ID, struct sockaddr_in& );
-    void compressHeader  ( JUDPArchive&, JAUS_ID );
+    bool uncompressHeader( JUDPArchive&, JAUS_ID, struct sockaddr_in& );
+    bool compressHeader  ( JUDPArchive&, JAUS_ID );
 
 };
 

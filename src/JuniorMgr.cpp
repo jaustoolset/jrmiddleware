@@ -7,6 +7,9 @@
 
 JuniorMgr::JuniorMgr()
 {
+    // Initialize config data
+    _maxMsgHistory = 100;   // as a message count
+    _oldMsgTimeout = 10;    // in seconds
 }
 
 JuniorMgr::~JuniorMgr()
@@ -31,6 +34,39 @@ void JuniorMgr::sendAckMsg( Message* incoming )
 }
 
 
+// Helper function to detect duplicate messages
+bool JuniorMgr::isDuplicateMsg(Message* msg)
+{
+    MsgIdListIter iter = _recentMsgs.begin();
+    while (iter != _recentMsgs.end())
+    {
+        // Make sure this entry isn't old (in time)
+        if ((JrGetTimestamp() - iter->first) > _oldMsgTimeout)
+        {
+            iter = _recentMsgs.erase(iter);
+            continue;
+        }
+
+        // Check if this element is a match for the incoming message
+        if (iter->second.first == msg->getSourceId() &&
+            iter->second.second == msg->getSequenceNumber())
+        {
+            return true;
+        }
+
+        // Increment the iterator to check the next element
+        iter++;
+    }
+
+    // Push this message into our recently received list, so we
+    // can detect future duplicates.  Make sure our list doesn't get too big.
+    _recentMsgs.push_back(std::make_pair(JrGetTimestamp(), std::make_pair(
+        msg->getSourceId(), msg->getSequenceNumber())));
+    if (_recentMsgs.size() > _maxMsgHistory) _recentMsgs.pop_front();
+    return false;
+}
+
+
 // This code works, but is absolutely atrocious.
 // I need to rework this for improved readability.
 void JuniorMgr::checkLargeMsgBuffer()
@@ -38,21 +74,32 @@ void JuniorMgr::checkLargeMsgBuffer()
     // This function checks the large message buffer
     // (a temporary holding cell while we wait for all the pieces
     // of a divided message) for completed transmissions.
-    MessageListIter msgIter = _largeMsgBuffer.begin();
+    TimeStampedMsgListIter msgIter = _largeMsgBuffer.begin();
     while (msgIter != _largeMsgBuffer.end())
     {
+        // If the message in the history buffer is too old, discard it.
+        // This prevents us from filling the buffer with partial messages
+        // that never found a mate.
+        if ((JrGetTimestamp() - msgIter->first) > _oldMsgTimeout)
+        {
+            // Discard the message and remove from the list
+            delete (msgIter->second);
+            msgIter = _largeMsgBuffer.erase(msgIter);
+            continue;
+        }
+
         // If this is the first message of a sequence, try to find the rest of 'em.
-        if ((*msgIter)->getDataControlFlag() == 1)
+        if (msgIter->second->getDataControlFlag() == 1)
         {
             // Search the message list for the next one in the sequence.
-            unsigned short msgnum = (*msgIter)->getSequenceNumber();
+            unsigned short msgnum = msgIter->second->getSequenceNumber();
             int msgcount = 1;
-            MessageListIter nextMsg;
+            TimeStampedMsgListIter nextMsg;
 
             while (1)
             {
                 nextMsg = searchMsgList(_largeMsgBuffer,
-                                (*msgIter)->getSourceId(), ++msgnum);
+                                msgIter->second->getSourceId(), ++msgnum);
                 msgcount++;
 
                 // If we didn't find the next message in the sequence,
@@ -67,28 +114,29 @@ void JuniorMgr::checkLargeMsgBuffer()
                 // If this message is not the last message in the sequence,
                 // continue the interior "while" loop until we find a missing
                 // message or the true end.
-                if ((*nextMsg)->getDataControlFlag() != 8) continue;
+                if (nextMsg->second->getDataControlFlag() != 8) continue;
 
                 // Getting to this point means we know that all the messages
                 // in a sequence are available.  Reconstruct the original message.
                 for (int i=1; i < msgcount; i++)
                 {
                     nextMsg = searchMsgList(_largeMsgBuffer,
-                                (*msgIter)->getSourceId(), (*msgIter)->getSequenceNumber()+i);
-                    (*msgIter)->getPayload().append( (*nextMsg)->getPayload() );
-                    delete (*nextMsg);
+                                msgIter->second->getSourceId(), 
+                                msgIter->second->getSequenceNumber()+i);
+                    msgIter->second->getPayload().append( nextMsg->second->getPayload() );
+                    delete (nextMsg->second);
                     _largeMsgBuffer.erase(nextMsg);
                 }
 
                 // Now that we have a complete message, add it to the delivery buffer
                 // and remove it from the unfinished message buffer.
-                if ((*msgIter)->getPriority() > JrMaxPriority)
+                if (msgIter->second->getPriority() > JrMaxPriority)
                 {
-                    _buffers[JrMaxPriority].push_back((*msgIter));
+                    _buffers[JrMaxPriority].push_back(msgIter->second);
                 }
                 else
                 {
-                    _buffers[(*msgIter)->getPriority()].push_back((*msgIter));
+                    _buffers[msgIter->second->getPriority()].push_back(msgIter->second);
                 }
 
                 // Last, we need to erase the first message in the set from 
@@ -109,37 +157,29 @@ void JuniorMgr::checkLargeMsgBuffer()
 
 bool JuniorMgr::addMsgToBuffer(Message* msg)
 {
-    // If this is an ack/nak response message, disregard it.
-    if ((msg->getAckNakFlag() == 2) || msg->getAckNakFlag() == 3)
+    // If this is an ack/nak response or a duplicate message, disregard it.
+    if ((msg->getAckNakFlag() == 2) || (msg->getAckNakFlag() == 3) ||
+        isDuplicateMsg(msg))
     {
         delete msg;
         return false;
     }
-
-    // Before adding to the buffer, make sure it isn't a duplicate
-    // of one we just processed.
-    if (std::find(_recentMsgs.begin(), _recentMsgs.end(),
-        std::make_pair(msg->getSourceId(), msg->getSequenceNumber())) !=
-        _recentMsgs.end())
-    {
-        // Looks like this is a duplicate of one we've already received.
-        // Free the message and return.
-        delete msg;
-        return false;
-    }
-
-    // Push this message into our recently received list, so we
-    // can detect duplicates.  Make sure our list doesn't get too big.
-    _recentMsgs.push_back(std::make_pair(
-        msg->getSourceId(), msg->getSequenceNumber()));
-    if (_recentMsgs.size() > MsgHistory) _recentMsgs.pop_front();
 
     // If this message is part of a larger set, add it to the
     // "waiting for a complete" message queue.
     if (msg->getDataControlFlag() != 0)
     {
-        _largeMsgBuffer.push_back(msg);
+        _largeMsgBuffer.push_back(std::make_pair(JrGetTimestamp(),msg));
         checkLargeMsgBuffer();
+
+        // We need to manage the large message buffer, so we don't have messages
+        // that never vanish.
+        if (_largeMsgBuffer.size() > _maxMsgHistory)
+        {
+            TimeStampedMsg oldest = _largeMsgBuffer.front();
+            delete oldest.second;
+            _largeMsgBuffer.pop_front();
+        }
     }
     // Otherwise, put the message in a priority-based buffer, being
     // careful to make sure that the priority is in range.
@@ -159,7 +199,8 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
                        unsigned int size, 
                        const char* buffer,
                        int priority,
-                       int flags)
+                       int flags,
+                       MessageCode code)
 {
     // Check for degenerate case
     if (destination == 0) return InvalidID;
@@ -190,6 +231,7 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
         msg.setDestinationId(destination);
         msg.setSourceId(_id);
         msg.setPriority(priority);
+        msg.setMessageCode(code);
         if (flags & 0x01) msg.setAckNakFlag(1);
         msg.setSequenceNumber(++_message_counter);
 
@@ -261,7 +303,6 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
             // return an error.
             if (counter == 400) return Timeout;
         }
-        //printf("Looping with bytes_sent = %ld, size = %ld\n", bytes_sent, size);
     } while(bytes_sent < size);  // continue to loop until we've sent
                                  // the entire buffer.
     return Ok;
@@ -270,32 +311,25 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
 JrErrorCode JuniorMgr::recvfrom(unsigned long* sender,
                         unsigned int* bufsize,
                         char* buffer,
-                        int* priority)
+                        int* priority,
+                        MessageCode* code)
 {
-    // Check the socket for incoming messages.  Process up to 5, so
-    // we don't spin too long in this function.
-    for (int i=0; i < 10; i++)
+    // Check the socket for incoming messages.  
+    MessageList msglist;
+    Transport::TransportError ret = _socket_ptr->recvMsg(msglist);
+
+    // Process each message in the received list
+    while (!msglist.empty())
     {
-        MessageList msglist;
-        Transport::TransportError ret = _socket_ptr->recvMsg(msglist);
-        if ((ret != Transport::Ok) || (msglist.empty()))
-        {
-            // No messages.  Break the loop early.  
-            break;
-        }
+        // Extract the message from the list
+        Message* msg = msglist.front();
+        msglist.pop_front();
 
-        while (!msglist.empty())
-        {
-            // Extract the message from the list
-            Message* msg = msglist.front();
-            msglist.pop_front();
+        // Found a message.  Form a response if ACK/NAK selected.
+        if (msg->getAckNakFlag() == 1) sendAckMsg( msg );
 
-            // Found a message.  Form a response if ACK/NAK selected.
-            if (msg->getAckNakFlag() == 1) sendAckMsg( msg );
-
-            // Add this message to a priority buffer
-            addMsgToBuffer(msg);
-        }
+        // Add this message to a priority buffer
+        addMsgToBuffer(msg);
     }
 
     // Check each priority based buffer (highest first) looking for a message
@@ -311,6 +345,7 @@ JrErrorCode JuniorMgr::recvfrom(unsigned long* sender,
             // Extract the data fields
             if (sender != NULL) *sender = value->getSourceId().val;
             if (priority != NULL) *priority = value->getPriority();
+            if (code != NULL) *code = value->getMessageCode();
             unsigned int data_size; char* data_ptr;
             value->getPayload(data_size, data_ptr);
 
@@ -335,7 +370,7 @@ JrErrorCode JuniorMgr::recvfrom(unsigned long* sender,
     return NoMessages;
 }
 
-JrErrorCode JuniorMgr::connect(unsigned long id)
+JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
 {
     // Check for degenerate value
     if (id == 0) return InvalidID;
@@ -348,12 +383,15 @@ JrErrorCode JuniorMgr::connect(unsigned long id)
         return InvalidID;
     }
 
+    // Parse the config file
+    //_config.parseFile(config_file);
+
     // The name of our local socket is the string form of our ID.
     std::stringstream name; name << id;
 
     // First open a socket with the given name.
-    JrSocket* mySocket = new JrSocket;
-    if (mySocket->initialize(name.str()) != Transport::Ok)
+    JrSocket* mySocket = new JrSocket(name.str());
+    if (mySocket->initialize(config_file) != Transport::Ok)
     {
         printf("Failed to open a local socket.  Returning error...\n");
         delete mySocket;
@@ -390,8 +428,13 @@ JrErrorCode JuniorMgr::connect(unsigned long id)
         JrSleep(1);
     }
 
-    // Success
+    // Success.  Store values
     _socket_ptr = mySocket;
     _id.val     = id;
+
+    // Initialize config data from file
+    _config.getValue("MaxMsgHistory", _maxMsgHistory);
+    _config.getValue("OldMsgTimeout", _oldMsgTimeout);
+
     return Ok;
 }

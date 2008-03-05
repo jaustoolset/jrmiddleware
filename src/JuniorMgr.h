@@ -5,11 +5,14 @@
 #include "JuniorAPI.h"
 #include "Message.h"
 #include "OS.h"
+#include "ConfigData.h"
 #include <stdio.h>
 #include <stdlib.h>
 
 typedef std::pair<JAUS_ID, unsigned short> MsgId;
-const unsigned short MsgHistory = 50;
+typedef std::pair<unsigned long, MsgId> TimeStampedMsgId;
+typedef std::list<TimeStampedMsgId> MsgIdList;
+typedef std::list<TimeStampedMsgId>::iterator MsgIdListIter;
 
 class JuniorMgr
 {
@@ -20,12 +23,12 @@ public:
 
     // The public functions mirror the API equivalents.
     JrErrorCode sendto( unsigned long destination, unsigned int size, 
-                const char* buffer, int priority, int flags);
+                const char* buffer, int priority, int flags, MessageCode code = 0);
 
     JrErrorCode recvfrom( unsigned long* sender, unsigned int* bufsize,
-                  char* buffer, int* priority);
+                  char* buffer, int* priority, MessageCode* code = NULL);
 
-    JrErrorCode connect(unsigned long id);
+    JrErrorCode connect(unsigned long id, std::string config_file);
 
 private:
 
@@ -34,26 +37,35 @@ private:
     void sendAckMsg(Message* source);
     bool addMsgToBuffer(Message* msg);
     void checkLargeMsgBuffer();
-    MessageListIter searchMsgList(MessageList& list, JAUS_ID sender, unsigned short seqnum);
+    bool isDuplicateMsg(Message* msg);
+    TimeStampedMsgListIter searchMsgList(TimeStampedMsgList& list, 
+                                         JAUS_ID sender, 
+                                         unsigned short seqnum);
 
     // Private data.
-    MessageList       _buffers[JrMaxPriority+1];
-    MessageList       _largeMsgBuffer;
-    JAUS_ID           _id;
-    JrSocket*         _socket_ptr;
-    unsigned short    _message_counter;
-    std::list<MsgId>  _recentMsgs;
+    MessageList        _buffers[JrMaxPriority+1];
+    TimeStampedMsgList _largeMsgBuffer;
+    JAUS_ID            _id;
+    JrSocket*          _socket_ptr;
+    unsigned short     _message_counter;
+    MsgIdList          _recentMsgs;
+    ConfigData         _config;
+
+    // Configuration data
+    unsigned short _maxMsgHistory;      // as a message count
+    unsigned short _oldMsgTimeout; // in seconds
 };
 
-inline MessageListIter JuniorMgr::searchMsgList(MessageList& list, 
+inline TimeStampedMsgListIter JuniorMgr::searchMsgList(
+                                         TimeStampedMsgList& list, 
                                          JAUS_ID sender, 
                                          unsigned short seqnum)
 {
-    for (MessageListIter iter = list.begin();
+    for (TimeStampedMsgListIter iter = list.begin();
          iter != list.end(); iter++)
     {
-        if (((*iter)->getSourceId() == sender) &&
-            ((*iter)->getSequenceNumber() == seqnum))
+        if ((iter->second->getSourceId() == sender) &&
+            (iter->second->getSequenceNumber() == seqnum))
             return iter;
     }
     return list.end();

@@ -18,7 +18,7 @@ typedef std::string SocketId;
 class JrSocket : public Transport
 {
 public:
-    JrSocket();
+    JrSocket(std::string name);
    ~JrSocket();
 
     // All functions are abstract
@@ -41,6 +41,7 @@ protected:
     bool                 is_connected;
     AddressMap<SocketId> _map;
     SocketId             connected_dest;
+    std::string          _socket_name;
     
     // Unfortunately, implementations are different between UNIX
     // and Windows, since Windows does not support named sockets.

@@ -49,8 +49,8 @@ public:
    ~HeaderCompressionTable(){};
 
     // Public functions to compress/uncompress
-    void compress( JAUS_ID id, JUDPArchive&   archive );
-    void uncompress( JAUS_ID id, JUDPArchive& archive );
+    bool compress( JAUS_ID id, JUDPArchive&   archive );
+    bool uncompress( JAUS_ID id, JUDPArchive& archive );
 
     // Update an entry within the table
     void update( JAUS_ID id, JUDPArchive& msg );
@@ -66,16 +66,19 @@ protected:
 };
 
 
-inline void HeaderCompressionTable::compress( JAUS_ID id,
+inline bool HeaderCompressionTable::compress( JAUS_ID id,
                                               JUDPArchive& archive )
 {
     // check for mal-formed cases
-    if (id == 0) return;
+    if (id == 0) return false;
 
     // Hunt through the table trying to find a match.
     CompressionTableEntry* entry = searchEntries( id, archive );
     if ((entry == NULL) || (entry->number == 0))
     {
+        // Make sure we don't roll the counter
+        if (counter >= 255) return false;
+
         // Didn't find a match, or no current compression. 
         // Propose compression of the JAUS header.
         //printf("Proposing new HC compression: %ld\n", counter+1);
@@ -106,13 +109,15 @@ inline void HeaderCompressionTable::compress( JAUS_ID id,
         archive.setHCFlags( entry->flags );
         archive.removeAt( 5, entry->length );
     }
+
+    return true;
 }
 
-inline void HeaderCompressionTable::uncompress( JAUS_ID id,
+inline bool HeaderCompressionTable::uncompress( JAUS_ID id,
                                                 JUDPArchive& archive )
 {
     // check for mal-formed cases
-    if (id.val == 0) return;
+    if (id.val == 0) return false;
 
     // Find the entry for the given JAUS ID and HC number
     CompressionTableEntry* entry = findEntry( id, archive );
@@ -120,7 +125,7 @@ inline void HeaderCompressionTable::uncompress( JAUS_ID id,
     {
         // Unrecognized header compression.  This should return an error
         // eventually (not yet implemented)
-        return;
+        return false;
     }
 
     // Update the data flags for this entry
@@ -128,7 +133,7 @@ inline void HeaderCompressionTable::uncompress( JAUS_ID id,
    
     // Insert the HeaderCompression archive back into the incoming message
     archive.insertAt( 5, entry->archive );
-    //printf("Inserting header from CompressionTable (%ld)...\n", entry->number);
+    return true;
 }
 
 

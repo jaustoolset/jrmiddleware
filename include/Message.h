@@ -6,9 +6,15 @@
 #include "Archive.h"
 #include "Types.h"
 
+// Define a Message Code
+typedef unsigned short MessageCode;
+
 class Message;
 typedef std::list<Message*> MessageList;
 typedef std::list<Message*>::iterator MessageListIter;
+typedef std::pair<unsigned long, Message*> TimeStampedMsg;
+typedef std::list<TimeStampedMsg> TimeStampedMsgList;
+typedef std::list<TimeStampedMsg>::iterator TimeStampedMsgListIter;
 
 
 class Message

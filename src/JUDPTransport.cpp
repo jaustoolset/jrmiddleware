@@ -2,16 +2,24 @@
 
 #include "JUDPTransport.h"
 #include "Message.h"
+#include "ConfigData.h"
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
+
+#ifdef WINDOWS
+#define getSocketError WSAGetLastError()
+#else
+#define getSocketError errno
+#endif
 
 
 JUDPTransport::JUDPTransport():
     _map(),
     _socket(0),
     _inTable(),
-    _outTable()
+    _outTable(),
+    _multicastAddr()
 {
 }
 
@@ -29,10 +37,29 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     WSADATA temp;
     WSAStartup(0x22, &temp);
 #endif
+
+    // Read the configuration file, and set-up defaults for anything
+    // that isn't specified.
+    ConfigData config;
+    config.parseFile(filename);
+    unsigned short port = 3794;
+    config.getValue("UDP_Port", port);
+    unsigned short multicast_TTL = 1;
+    config.getValue("MULTICAST_TTL", multicast_TTL);
+    std::string multicast_addr = "224.1.0.1";
+    config.getValue("MULTICAST_ADDR", multicast_addr);
+    int buffer_size = 10000;
+    config.getValue("SND_RCV_BUFFER_SIZE", buffer_size);
+
+    // Set-up the multicast address based on config data
+    _multicastAddr.port = port;
+    _multicastAddr.addr = inet_addr(multicast_addr.c_str());
+    
+    // Create the socket
     _socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (_socket < 0)
     {
-        printf("Unable to create socket for port 3794.\n");
+        printf("Unable to create socket for UDP communication.\n");
         return InitFailed;
     }
 
@@ -40,10 +67,10 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     struct sockaddr_in sockAddr;
     sockAddr.sin_family = AF_INET;
     sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    sockAddr.sin_port = htons(3794);
+    sockAddr.sin_port = htons(port);
     if (bind(_socket,(struct sockaddr*)&sockAddr,sizeof(sockAddr))<0)
     {
-        printf("Unable to bind to port 3794\n");
+        printf("Unable to bind to port %ld.  Returning failed.\n", port);
         return InitFailed;
     }
 
@@ -61,19 +88,24 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     // 
     // Set-up for multicast:
     //  1) No loopback
-    //  2) TTL value of 1
+    //  2) TTL value set by configuration file
     /// 3) Send out our socket.
-    //  4) Join the multicast group
+    //  4) Join the multicast group set by configuration file
     //
     char loop = 0;
     setsockopt(_socket, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop));
-    char ttl = 1;
-    setsockopt(_socket, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl));
+    setsockopt(_socket, IPPROTO_IP, IP_MULTICAST_TTL, (const char*) &multicast_TTL, sizeof(multicast_TTL));
     setsockopt (_socket, IPPROTO_IP, IP_MULTICAST_IF, (const char*) &sockAddr, sizeof(sockAddr));
     struct ip_mreq mreq;
     mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-    mreq.imr_multiaddr.s_addr = inet_addr("224.1.0.1"); 
+    mreq.imr_multiaddr.s_addr = _multicastAddr.addr; 
     setsockopt (_socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (const char*) &mreq, sizeof(mreq));
+
+    // Increase the size of the send/receive buffers
+    int length = sizeof(buffer_size);
+    setsockopt(_socket, SOL_SOCKET, SO_RCVBUF, (char*)&buffer_size, length);
+    setsockopt(_socket, SOL_SOCKET, SO_SNDBUF, (char*)&buffer_size, length);
+
     return Ok;
 }
 
@@ -91,6 +123,9 @@ void JUDPTransport::packHdr(JUDPArchive& packed_msg)
     // THese values may be adjusted before transmission.
     packed_msg << (unsigned short) 0;
 
+    // Next comes message length.  This value needs to be adjusted 
+    // before transmission.
+    packed_msg << (unsigned short) 0;
 }
 
 Transport::TransportError JUDPTransport::sendMsg(Message& msg)
@@ -118,6 +153,7 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
             //
             JUDPArchive payload;
             packHdr( payload );
+            payload.setMsgLength( msg.getMsgLength() );
 
             //
             // Change the destination to the specific JAUS_ID.  In most cases,
@@ -132,7 +168,6 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
             //
             Archive msg_archive;
             msg.pack(msg_archive);
-            payload << msg_archive.getArchiveLength();
             payload.append( msg_archive );
 
             //
@@ -146,19 +181,21 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
             dest.sin_addr.s_addr = _map.getList()[i].second.addr;
             dest.sin_port = _map.getList()[i].second.port;
             
-            // Lastly, send the message.
-            if (sendto(_socket, payload.getArchive(), payload.getArchiveLength(),
-                       0, (struct sockaddr*) &dest, sizeof(dest)) < 0 )
+            // Lastly, send the message.         
+            int val =sendto(_socket, payload.getArchive(), payload.getArchiveLength(),
+                       0, (struct sockaddr*) &dest, sizeof(dest));// < 0 )
+            if (val < 0)
             {
-                printf("Unable to send message to %s:%d\n",
+                printf("Unable to send message to %s:%d (return=%ld)\n",val,
                        inet_ntoa( *(struct in_addr*) &dest.sin_addr.s_addr ),
                        htons(dest.sin_port));
-                printf("Sendto failed with errno=%d\n", errno);
+                printf("Sendto failed with last error=%d\n", getSocketError);
                 result = Failed;
             }
             else
+            {
                 result = Ok;
-    
+            }   
         }
     }
 
@@ -173,92 +210,101 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
 Transport::TransportError JUDPTransport::recvMsg(MessageList& msglist)
 {
     char buffer[5000];
-
-    // Check the socket for a message
-    struct sockaddr_in source;
-    int source_length = sizeof(source);
-    int result = recvfrom(_socket, buffer, 5000, 0,
-                          (struct sockaddr*) &source, &source_length);
-    if (result <= 0)
-    {
-        // No new messages.
-        return NoMessages;
-    }
-
-    //
-    // Getting to this point means we have a message.  
-    // Stuff it into a JUDP Archive, so we can access pieces of the message
-    // for analysis.
-    // 
-    JUDPArchive raw_msg;
-    raw_msg.setData( buffer, result );
-
-    // 
-    // Pull off the source IP info for convenience.  Look-up the corresponding
-    // JAUS_ID.
-    //
-    IP_ADDRESS sourceAddr( source );
-    JAUS_ID sourceId;
-    _map.getIdFromAddr( sourceId, sourceAddr );
-    
-   
-    // 
-    // Check JUDP version (should be "1")
-    //
+    Transport::TransportError ret = NoMessages;
+    unsigned short jausMsgLength;
     unsigned char version;
-    raw_msg.getVersion(version);
-    if ( version != 1)
+ 
+    // Check the recv port in a loop, exiting only when we have
+    // no messages in the buffer (or we received 10 packets).
+    for (int i=0; i<10; i++)
     {
-        printf("Invalid message received from %s:%d.  Bad version.\n",
-                  inet_ntoa(*(struct in_addr*)&sourceAddr.addr), 
-                  ntohs(sourceAddr.port));
-        return NoMessages;
-    }
+        // Check the socket for a message
+        struct sockaddr_in source;
+        int source_length = sizeof(source);
+        int result = recvfrom(_socket, buffer, 5000, 0,
+                              (struct sockaddr*) &source, &source_length);
+         
+        // If there are no new messages, stop checking.
+        if (result <= 0) break;
 
-    // A single JUDP packet may have multiple JAUS messages on it, each
-    // with there own header compression flags.  We need to parse through
-    // the entire packet, remove each message one at a time and
-    // adding it to the return list.
-    while (raw_msg.getArchiveLength() > 1)
-    {
-        // Handle header compression
-        uncompressHeader( raw_msg, sourceId, source );
+        //
+        // Getting to this point means we have a message.  
+        // Stuff it into a JUDP Archive, so we can access pieces of the message
+        // for analysis.
+        // 
+        JUDPArchive raw_msg;
+        raw_msg.setData( buffer, result );
 
-        // If the message length is zero, this message was only a transport
-        // message (probably a Header Compression message).  Nothing more
-        // to do.
-        unsigned short jausMsgLength;
-        raw_msg.getMsgLength( jausMsgLength );
-        if ( jausMsgLength != 0 )
+        // 
+        // Pull off the source IP info for convenience.  Look-up the corresponding
+        // JAUS_ID.
+        //
+        IP_ADDRESS sourceAddr( source );
+        JAUS_ID sourceId;
+        _map.getIdFromAddr( sourceId, sourceAddr );
+        
+        // 
+        // Check JUDP version (should be "1")
+        //
+        raw_msg.getVersion(version);
+        if ( version != 1)
         {
-            // Extract the payload into a message
-            // UGH!! Two copies here.  Need to eliminate this.
-            Archive archive;
-            archive.setData( raw_msg.getJausMsgPtr(), jausMsgLength );
-            Message* msg = new Message();
-            msg->unpack(archive);
-
-            //
-            // Add the source to the transport discovery map.
-            //
-            _map.addAddress( msg->getSourceId(), sourceAddr );
-
-            // Add the message to the list
-            msglist.push_back(msg);
+            // This message contains an invalid version.  Drop it.
+            continue;
         }
 
-        // Remove this message from the JUDP archive, so
-        // we can process the next message in the packet.
-        raw_msg.removeAt(1, 4+jausMsgLength);
+        // A single JUDP packet may have multiple JAUS messages on it, each
+        // with there own header compression flags.  We need to parse through
+        // the entire packet, remove each message one at a time and
+        // adding it to the return list.
+        while (raw_msg.getArchiveLength() > 1)
+        {
+            // Handle header compression.  If uncompressing the message fails,
+            // silently discard the message (but not the remainder of the packet)
+            if (!uncompressHeader( raw_msg, sourceId, source ))
+            {
+                // Remove this message from the JUDP archive, so
+                // we can process the next message in the packet.
+                raw_msg.getMsgLength( jausMsgLength );
+                raw_msg.removeAt(1, 4+jausMsgLength);
+                continue;
+            }
+
+            // If the message length is zero, this message was only a transport
+            // message (probably a Header Compression message).  Nothing more
+            // to do.
+            raw_msg.getMsgLength( jausMsgLength );
+            if ( jausMsgLength != 0 )
+            {
+                // Extract the payload into a message
+                // UGH!! Two copies here.  Need to eliminate this.
+                Archive archive;
+                archive.setData( raw_msg.getJausMsgPtr(), jausMsgLength );
+                Message* msg = new Message();
+                msg->unpack(archive);
+
+                //
+                // Add the source to the transport discovery map.
+                //
+                _map.addAddress( msg->getSourceId(), sourceAddr );
+
+                // Add the message to the list and change the return value
+                msglist.push_back(msg);
+                ret = Ok;
+            }
+
+            // Remove this message from the JUDP archive, so
+            // we can process the next message in the packet.
+            raw_msg.removeAt(1, 4+jausMsgLength);
+        }
     }
 
     // If we didn't find any message, return NoMessage.  Otherwise, Ok.
-    if (msglist.empty()) return NoMessages;
-    return Ok;
+    return ret;
 }
 
 
-void JUDPTransport::uncompressHeader( JUDPArchive& packed_msg,
+bool JUDPTransport::uncompressHeader( JUDPArchive& packed_msg,
                                       JAUS_ID  source,
                                       struct sockaddr_in& sourceAddr )
 {
@@ -269,10 +315,12 @@ void JUDPTransport::uncompressHeader( JUDPArchive& packed_msg,
     if (flags == 0)
     {
         // No compression requested.  Nothing to do.
-        return;
+        return true;
     }
     else if ( flags == 1)
     {
+        // HEADER COMPRESSION STILL NEEDS WORK.  NOT YET FUNCTIONAL.
+        return true;
 
         // source has requested compression.  Add an entry to our table
         _inTable.update( source, packed_msg );
@@ -290,41 +338,42 @@ void JUDPTransport::uncompressHeader( JUDPArchive& packed_msg,
         //       htons(sourceAddr.sin_port));
 
         // Lastly, send the message back to the source
-        if (sendto(_socket, response.getArchive(), 
+        sendto(_socket, response.getArchive(), 
                    response.getArchiveLength(), 0,
-                    (struct sockaddr*) &sourceAddr, sizeof(sourceAddr)) < 0 )
-        {
-            printf("Unable to send header compression response to %s:%d\n",
-               inet_ntoa( *(struct in_addr*) &sourceAddr.sin_addr.s_addr ),
-               htons(sourceAddr.sin_port));
-            printf("Sendto failed with errno=%d\n", errno);
-            return;
-        }
+                    (struct sockaddr*) &sourceAddr, sizeof(sourceAddr));
+        return true;
     }
     else if (flags == 2)
     {
         // acceptance message for header compression.  Update the entry.
         _outTable.update( source, packed_msg );
+        return true;
     }
     else if (flags == 3)
     {
+        // CURRENTLY AN ERROR CASE!  WE SHOULD NEVER RECEIVE A COMPRESSED MSG.
+        return false;
+
         // Compressed message received.  Uncompress it.
         _inTable.uncompress( source, packed_msg );
     }
-    else
-        printf("Unknown flag: %ld\n", flags);
+    
+    return false;
 }
 
 
-void JUDPTransport::compressHeader( JUDPArchive& packed_msg,
+bool JUDPTransport::compressHeader( JUDPArchive& packed_msg,
                                     JAUS_ID  destId )
 {
+    // HEADER COMPRESSION STILL NEEDS WORK.  NOT YET FUNCTIONAL.
+    return false;
+
     // Check for a special case.  If we're broadcasting
     // the messsage, don't try to compress anything 
-    if (destId.containsWildcards()) return ;
+    if (destId.containsWildcards()) return false;
 
     // Header compression is handled within the table.
-    _outTable.compress( destId, packed_msg );
+    return (_outTable.compress( destId, packed_msg ));
 }
 
 Transport::TransportError JUDPTransport::broadcastMsg(Message& msg)
@@ -335,6 +384,7 @@ Transport::TransportError JUDPTransport::broadcastMsg(Message& msg)
     //
     JUDPArchive payload;
     packHdr( payload );
+    payload.setMsgLength( msg.getMsgLength() );
 
     //
     // Now pack the message for network transport and append
@@ -342,20 +392,19 @@ Transport::TransportError JUDPTransport::broadcastMsg(Message& msg)
     //
     Archive msg_archive;
     msg.pack(msg_archive);
-    payload << msg_archive.getArchiveLength();
     payload.append( msg_archive );
 
     // Create the destination address structure
     struct sockaddr_in dest;
     dest.sin_family = AF_INET;
-    dest.sin_addr.s_addr = inet_addr("224.1.0.1");
-    dest.sin_port = htons(3794);
+    dest.sin_addr.s_addr = _multicastAddr.addr;
+    dest.sin_port = htons(_multicastAddr.port);
     
     // Lastly, send the message.
     if (sendto(_socket, payload.getArchive(), payload.getArchiveLength(),
                0, (struct sockaddr*) &dest, sizeof(dest)) < 0 )
     {
-        printf("Sendto (multicast) failed with errno=%d\n", errno);
+        printf("Sendto (multicast) failed with getlasterror=%d\n", getSocketError);
         return Failed;
     }
     

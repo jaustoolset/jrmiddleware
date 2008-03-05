@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <algorithm>
+#include "ConfigData.h"
 #include "JrSockets.h"
 #include "JUDPTransport.h"
 #include "Transport.h"
@@ -24,14 +25,20 @@ int main(int argc, char* argv[])
 #if 0
     int i=fork();
     if (i != 0) exit(0);
+    setsid();
 #endif
 
-    // Break for terminal signals.
-    //setsid();
+    // Pull the config file from the command line arguments
+    std::string config_file = "";
+    if (argc >= 2)
+    {
+        printf("Using config file: %s\n", argv[1]);
+        config_file = std::string(argv[1]);
+    }
 
     // Create the public socket that allows APIs to find us.
-    JrSocket publicSocket;
-    if (publicSocket.initialize(std::string("JuniorRTE")) != Transport::Ok)
+    JrSocket publicSocket(std::string("JuniorRTE"));
+    if (publicSocket.initialize(config_file) != Transport::Ok)
     {
         printf("Unable to initialize internal socket.  Exiting with error...\n");
         exit(1);
@@ -50,7 +57,7 @@ int main(int argc, char* argv[])
 
     // Add UDP
     JUDPTransport udp;
-    if (udp.initialize("") != Transport::Ok)
+    if (udp.initialize(config_file) != Transport::Ok)
     {
         printf("Unable to initialize UDP communications.\n");
     }

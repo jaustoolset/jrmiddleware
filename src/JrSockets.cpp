@@ -1,5 +1,6 @@
 //  JAUS Router Socket implementation
 #include "JrSockets.h"
+#include "ConfigData.h"
 #include <fcntl.h>
 #include <errno.h>
 #include <sstream>
@@ -10,10 +11,11 @@
 #define SOCK_PATH "/"
 #endif
 
-JrSocket::JrSocket():
+JrSocket::JrSocket(std::string name):
      sock(),
      is_connected(false),
-     _map()
+     _map(),
+     _socket_name(name)
 {
 }
 
@@ -26,7 +28,6 @@ JrSocket::~JrSocket()
 SocketId JrSocket::OpenMailslot(std::string name)
 {
     std::stringstream s; s << SOCK_PATH; s << name;
-    printf("Opening mailslot: %s\n", s.str().c_str());
     return CreateFile(s.str().c_str(), 
          GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 
          NULL, OPEN_EXISTING, 0, NULL);
@@ -63,12 +64,11 @@ Transport::TransportError JrSocket::sendMsg(Message& msg, SocketId sockname)
     // Send to the given socket
 #ifdef WINDOWS
     DWORD cbWritten;
-    //printf("SOCKET: Writing archive size=%ld\n", archive.getArchiveLength());
     bool fSuccess = WriteFile( sockname, archive.getArchive(), 
         archive.getArchiveLength(), &cbWritten, NULL);
     if (!fSuccess || (cbWritten != archive.getArchiveLength())) 
     {
-        printf("WriteFile failed"); 
+        printf("Unable to write to local mailslot.  Message dropped"); 
         return Failed;
     }
 
@@ -79,7 +79,6 @@ Transport::TransportError JrSocket::sendMsg(Message& msg, SocketId sockname)
     memcpy(addr.sun_path, sockname.c_str(), sockname.length());
     sendto(sock, archive.getArchive(), archive.getArchiveLength(), 0,
        (struct sockaddr *)&addr, sizeof(struct sockaddr_un));
-    //printf("Back from sending %d bytes on socket\n", archive.getArchiveLength());
 #endif
 
     return Ok;
@@ -120,35 +119,41 @@ Transport::TransportError JrSocket::sendMsg(Message& msg)
 
 Transport::TransportError JrSocket::recvMsg(MessageList& msglist)
 {
+    // Assume we don't have any messages to return...
+    Transport::TransportError ret = NoMessages;
+
     // Recv the message into a finite sized buffer
     char buffer[4096];
-    int bytes;
+    int bytes = 0;
+    //int counter = 0;
+
+    // Check the recv port in a loop, exiting only when we have
+    // no messages in the buffer or we've received 10 messages.
+    for (int counter = 0; counter < 10; counter++)
+    {
 
 #ifdef WINDOWS
-    bool fSuccess;
-
-    // Read the mailslot as if it's a file descriptor
-    DWORD bytesread;
-    fSuccess = ReadFile( sock, buffer, 4096, &bytesread, NULL);  
-    if (!fSuccess || (bytesread == 0)) return Transport::NoMessages;
-    bytes = bytesread;
+ 
+        // Read the mailslot as if it's a file descriptor
+        bool fSuccess; DWORD bytesread;
+        fSuccess = ReadFile( sock, buffer, 4096, &bytesread, NULL);  
+        if (!fSuccess) break;
+        bytes = bytesread;
 
 #else
 
-    struct sockaddr_un addr;
-    memset(addr.sun_path, 0, sizeof(addr.sun_path));
-    addr.sun_family = AF_UNIX;
-    int addr_len = sizeof(struct sockaddr_un);
-    bytes = recvfrom(sock, buffer, 4096, 0, (struct sockaddr*)&addr, &addr_len);
-    //printf("Back from recvfrom %ld\n", bytes);
-    if (bytes == -1) return Transport::NoMessages;
+        struct sockaddr_un addr;
+        memset(addr.sun_path, 0, sizeof(addr.sun_path));
+        addr.sun_family = AF_UNIX;
+        int addr_len = sizeof(struct sockaddr_un);
+        bytes = recvfrom(sock, buffer, 4096, 0, (struct sockaddr*)&addr, &addr_len);
 
 #endif
+
+        // If we didn't receive anything, break from the read loop.
+        if (bytes <= 0) break;
  
-    // Now that we have a datagram in our buffer, unpack it.
-    if (bytes > 0)
-    {
-        // Found a message.  Put it in an archive...
+        // Now that we have a datagram in our buffer, unpack it.
         Archive archive;
         archive.setData(buffer, bytes);
 
@@ -160,11 +165,12 @@ Transport::TransportError JrSocket::recvMsg(MessageList& msglist)
         // channel to the sender so we can talk to it later.
         if (!is_connected) openResponseChannel(msg);
 
-        // Add the message to the MessageList and return
+        // Add the message to the MessageList and change the return value
         msglist.push_back(msg);
+        ret = Ok;
     }
 
-    return Transport::Ok;
+    return ret;
 }
 
 Transport::TransportError JrSocket::broadcastMsg(Message& msg)
@@ -187,17 +193,16 @@ Transport::TransportError JrSocket::broadcastMsg(Message& msg)
     return Ok;
 }
 
-Transport::TransportError JrSocket::initialize(std::string source)
+Transport::TransportError JrSocket::initialize(std::string config_file)
 {
     // Set-up is considerably different for UNIX sockets and
     // Windows named pipes.
 #ifdef WINDOWS
-    std::stringstream s; s << SOCK_PATH; s << source;
-    printf("Trying to initialize: %s\n", s.str().c_str());
+    std::stringstream s; s << SOCK_PATH; s << _socket_name;
     sock = CreateMailslot(s.str().c_str(), 0, 0, NULL); 
     if (sock == INVALID_HANDLE_VALUE)
     {
-        printf("Cannot initialize mailslot for IPC comms\n");
+        printf("Internal error.  Cannot initialize mailslot for IPC comms\n");
         return Failed;
     }
 #else
@@ -209,21 +214,32 @@ Transport::TransportError JrSocket::initialize(std::string source)
     // Bind to the given filename
     struct sockaddr_un addr;
     addr.sun_family = AF_UNIX;
-    std::stringstream s; s << SOCK_PATH; s << source;
+    std::stringstream s; s << SOCK_PATH; s << _socket_name;
     memset(addr.sun_path, 0, sizeof(addr.sun_path));
     memcpy(addr.sun_path, s.str().c_str(), s.str().length());
     unlink(addr.sun_path);
     int len = s.str().length() + sizeof(addr.sun_family);
-    printf("Bind: %s (len=%d)\n", addr.sun_path, len);
     if (bind(sock, (struct sockaddr *)&addr, len) != 0)
     {
-        printf("Bind failed.  err=%d\n", errno);
+
+        printf("Bind failed for local socket(%s).  err=%d\n", s.str().c_str(), errno);
         return InitFailed;
     }
 
     // Make it nonblocking
     int flags = fcntl(sock, F_GETFL);
     fcntl( sock, F_SETFL, flags | O_NONBLOCK );
+
+    // Read the configuration file for buffer size info
+    ConfigData config;
+    config.parseFile(config_file);
+    int buffer_size = 10000;
+    config.getValue("SND_RCV_BUFFER_SIZE", buffer_size);
+
+    // Increase the size of the send/receive buffers
+    int length = sizeof(buffer_size);
+    setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)&buffer_size, length);
+    setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&buffer_size, length);
 
 #endif
 

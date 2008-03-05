@@ -14,8 +14,8 @@
 #endif
 
 void JrSleep(unsigned long milliseconds);
-void JrSpawnProcess(std::string path);
-unsigned long JrRandomValue();
+void JrSpawnProcess(std::string path, std::string arg);
+unsigned long JrGetTimestamp();
 
 #endif
 
