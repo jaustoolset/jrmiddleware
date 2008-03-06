@@ -5,7 +5,7 @@
 
 // Convenient typedefs, enumerations and constants
 typedef enum {Ok, NoMessages, InvalidID, Overflow, InitFailed, 
-              AddrUnknown, Timeout, UnknownError} JrErrorCode;
+              AddrUnknown, Timeout, UnknownError, NotInitialized} JrErrorCode;
 const unsigned char GuarenteeDelivery = 0x01;
 const int JrMaxPriority = 15;
 

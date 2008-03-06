@@ -383,8 +383,13 @@ JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
         return InvalidID;
     }
 
+    // Spawn the RTE.  Note that hte spawn process will 
+    // ensure that we don't create a duplicate.
+    JrSpawnProcess("JuniorRTE", config_file);
+    JrSleep(2000);
+
     // Parse the config file
-    //_config.parseFile(config_file);
+    _config.parseFile(config_file);
 
     // The name of our local socket is the string form of our ID.
     std::stringstream name; name << id;
