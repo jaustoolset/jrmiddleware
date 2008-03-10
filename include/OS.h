@@ -15,9 +15,9 @@
 #include <string>
 #ifdef WINDOWS
     #include "Winsock.h"
+    typedef int socklen_t;
 #else
     #include <sys/socket.h>
-    #include <cygwin/in.h>
     #include <unistd.h>
     #include <sys/un.h>
     #include <arpa/inet.h>

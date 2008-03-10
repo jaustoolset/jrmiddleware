@@ -27,8 +27,8 @@ ConfigData::ConfigError ConfigData::parseFile( std::string filename )
     // Parse line by line
     while (instream.good())
     {
-        char buffer[80];
-        instream.getline( buffer, 80);
+        char buffer[255];
+        instream.getline( buffer, 255);
         parseLine( std::string(buffer) );
     }
 
@@ -39,17 +39,17 @@ ConfigData::ConfigError ConfigData::parseFile( std::string filename )
 
 ConfigData::ConfigError ConfigData::parseLine( std::string line )
 {
-    // Return immediately if the string is empty
-    if (line.empty()) return Ok;
+    // Return immediately if the string is too small
+    deleteWhitespace(line);
+    if ((line.size()) < 3) return Ok;
 
     // Check for comment lines
-    deleteWhitespace(line);
     if (line[0]=='#') return Ok;
 
     // Make sure it's a valid name=value pair
     if (line.find("=") == std::string::npos)
     {
-        printf("Cannot parse config file.  Line: %s\n", line.c_str());
+        printf("Cannot parse config file.  Line: %s (%ld)\n", line.c_str(), line.size());
         return InvalidFile;
     }
 

@@ -158,7 +158,9 @@ Transport::TransportError JrSocket::recvMsg(MessageList& msglist)
         memset(addr.sun_path, 0, sizeof(addr.sun_path));
         addr.sun_family = AF_UNIX;
         int addr_len = sizeof(struct sockaddr_un);
-        bytes = recvfrom(sock, buffer, 4096, 0, (struct sockaddr*)&addr, &addr_len);
+        bytes = recvfrom(sock, buffer, 4096, 0, 
+                         (struct sockaddr*)&addr, 
+                         (socklen_t*) &addr_len);
 
 #endif
 
@@ -245,13 +247,16 @@ Transport::TransportError JrSocket::initialize(std::string config_file)
     // Read the configuration file for buffer size info
     ConfigData config;
     config.parseFile(config_file);
-    int buffer_size = 10000;
+    socklen_t buffer_size = 10000;
     config.getValue("MaxBufferSize", buffer_size);
 
     // Increase the size of the send/receive buffers
     int length = sizeof(buffer_size);
     setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)&buffer_size, length);
     setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&buffer_size, length);
+
+    getsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&buffer_size, &length);
+    printf("Configured socket for size: %ld\n", buffer_size);
 
 #endif
 

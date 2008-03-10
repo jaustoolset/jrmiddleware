@@ -118,6 +118,9 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     setsockopt(_socket, SOL_SOCKET, SO_RCVBUF, (char*)&buffer_size, length);
     setsockopt(_socket, SOL_SOCKET, SO_SNDBUF, (char*)&buffer_size, length);
 
+    getsockopt(_socket, SOL_SOCKET, SO_SNDBUF, (char*)&buffer_size, &length);
+    printf("Configured UDP socket for size: %ld\n", buffer_size);
+
     return Ok;
 }
 
@@ -234,7 +237,8 @@ Transport::TransportError JUDPTransport::recvMsg(MessageList& msglist)
         struct sockaddr_in source;
         int source_length = sizeof(source);
         int result = recvfrom(_socket, buffer, 5000, 0,
-                              (struct sockaddr*) &source, &source_length);
+                              (struct sockaddr*) &source, 
+                              (socklen_t*) &source_length);
          
         // If there are no new messages, stop checking.
         if (result <= 0) break;
