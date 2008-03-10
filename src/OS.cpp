@@ -1,7 +1,19 @@
-//  Abstract OS calls
+/*! 
+ ***********************************************************************
+ * @file      OS.cpp
+ * @author    Dave Martin, DeVivo AST, Inc.  
+ * @date      2008/03/03
+ *
+ * @attention Copyright (C) 2008
+ * @attention DeVivo AST, Inc.
+ * @attention All rights reserved
+ ************************************************************************
+ */
 #include "OS.h"
 
-void JrSleep(unsigned long milliseconds)
+using namespace DeVivo::Junior;
+
+void DeVivo::Junior::JrSleep(unsigned long milliseconds)
 {
 #ifdef WINDOWS
     Sleep(milliseconds);
@@ -10,7 +22,7 @@ void JrSleep(unsigned long milliseconds)
 #endif
 }
 
-void JrSpawnProcess(std::string path, std::string arg)
+void DeVivo::Junior::JrSpawnProcess(std::string path, std::string arg)
 {
 #ifdef WINDOWS
     // Windows gives us the createProcess function.  We just need to
@@ -52,7 +64,7 @@ void JrSpawnProcess(std::string path, std::string arg)
 }
 
 // Return the current time (in seconds)
-unsigned long JrGetTimestamp()
+unsigned long DeVivo::Junior::JrGetTimestamp()
 {
 #ifdef WINDOWS
     return (unsigned long)(GetTickCount()/1000);

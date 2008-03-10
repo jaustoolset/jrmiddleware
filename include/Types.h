@@ -1,15 +1,22 @@
-// A single header of common types
+/*! 
+ ***********************************************************************
+ * @file      Types.h
+ * @author    Dave Martin, DeVivo AST, Inc.  
+ * @date      2008/03/03
+ *
+ * @attention Copyright (C) 2008
+ * @attention DeVivo AST, Inc.
+ * @attention All rights reserved
+ ************************************************************************
+ */
 #ifndef __COMMON_TYPES_H
 #define __COMMON_TYPES_H
-
 
 #include <string>
 #include <list>
 
-// Math types
-#define PI 3.14159265359
-#define DEG2RAD (double(PI/180.0))
-#define RAD2DEG (double(180.0/PI))
+namespace DeVivo {
+namespace Junior {
 
 static unsigned char getByte(unsigned long in, char num)
 {
@@ -65,7 +72,7 @@ class JAUS_ID
         return false;
     }
 };
-
+}} // namespace DeVivo::Junior
 #endif
 
 

@@ -1,8 +1,21 @@
-// IPMap provides a mapping service between JAUS_ID and IP address (with port)
+/*! 
+ ***********************************************************************
+ * @file      AddressMap.h
+ * @author    Dave Martin, DeVivo AST, Inc.  
+ * @date      2008/03/03
+ *
+ * @attention Copyright (C) 2008
+ * @attention DeVivo AST, Inc.
+ * @attention All rights reserved
+ ************************************************************************
+ */
 #ifndef __ADDRESS_MAP_H
 #define __ADDRESS_MAP_H
 
 #include <vector>
+
+namespace DeVivo {
+namespace Junior {
 
 template<class S>
 class AddressMap 
@@ -67,6 +80,7 @@ inline bool AddressMap<S>::getIdFromAddr( JAUS_ID& id, S addr )
     }
     return false;
 }
+}} // namespace DeVivo::Junior
 #endif
 
 

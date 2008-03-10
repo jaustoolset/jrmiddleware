@@ -1,4 +1,14 @@
-//  Configuration Data class - maintains simple name=value pairings
+/*! 
+ ***********************************************************************
+ * @file      ConfigData.h
+ * @author    Dave Martin, DeVivo AST, Inc.  
+ * @date      2008/03/03
+ *
+ * @attention Copyright (C) 2008
+ * @attention DeVivo AST, Inc.
+ * @attention All rights reserved
+ ************************************************************************
+ */
 #ifndef  __CONFIG_DATA_H
 #define  __CONFIG_DATA_H
 
@@ -8,6 +18,8 @@
 #include <iostream>
 
 using namespace std;
+namespace DeVivo {
+namespace Junior {
 
 class ConfigData
 {
@@ -63,7 +75,7 @@ protected:
     ConfigError parseLine( std::string line );
 
 };
-
+}} // namespace DeVivo::Junior
 #endif
 
 

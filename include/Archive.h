@@ -1,4 +1,15 @@
-// Archive - a serialized message 
+/*! 
+ ***********************************************************************
+ * @file      Archive.h
+ * @author    Dave Martin, DeVivo AST, Inc.  
+ * @date      2008/03/03
+ *
+ * @attention Copyright (C) 2008
+ * @attention DeVivo AST, Inc.
+ * @attention All rights reserved
+ ************************************************************************
+ */
+
 #ifndef  __JAUS_ARCHIVE_H
 #define  __JAUS_ARCHIVE_H
 
@@ -7,6 +18,9 @@
 #include <math.h>
 #include "Types.h"
 #include "OS.h"
+
+namespace DeVivo {
+namespace Junior {
 
 //
 // For convenience, we define the scale and unscale functions here,
@@ -309,5 +323,5 @@ class JUDPArchive : public Archive
     void setHCNumber( unsigned char num )  { data[1] = num; }
     char* getJausMsgPtr( ) { return &data[5]; }
 };
-
+}} // namespace DeVivo::Junior
 #endif

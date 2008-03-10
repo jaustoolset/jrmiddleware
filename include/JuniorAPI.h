@@ -1,5 +1,14 @@
-// This is the principle header file used by application's to access
-// the Junior Toolset.  It defines all public functions and structures.
+/*! 
+ ***********************************************************************
+ * @file      JuniorAPI.h
+ * @author    Dave Martin, DeVivo AST, Inc.  
+ * @date      2008/03/03
+ *
+ * @attention Copyright (C) 2008
+ * @attention DeVivo AST, Inc.
+ * @attention All rights reserved
+ ************************************************************************
+ */
 #ifndef __JUNIOR_API_H
 #define __JUNIOR_API_H
 

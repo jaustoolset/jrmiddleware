@@ -1,5 +1,14 @@
-// This is the principle file for the realization of the Junior RTE.
-
+/*! 
+ ***********************************************************************
+ * @file      JuniorRTE.cpp
+ * @author    Dave Martin, DeVivo AST, Inc.  
+ * @date      2008/03/03
+ *
+ * @attention Copyright (C) 2008
+ * @attention DeVivo AST, Inc.
+ * @attention All rights reserved
+ ************************************************************************
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <algorithm>
@@ -10,11 +19,11 @@
 #include "Types.h"
 #include "OS.h"
 
+using namespace DeVivo::Junior;
 
 // Convenient typedefs
 typedef std::list<unsigned long>     ConnectionList;
 typedef std::list<JAUS_ID>::iterator ConnectionListIter;
-
 
 // Main loop
 int main(int argc, char* argv[])
@@ -35,6 +44,12 @@ int main(int argc, char* argv[])
         printf("Using config file: %s\n", argv[1]);
         config_file = std::string(argv[1]);
     }
+
+    // Parse the config file, looking for our settings
+    ConfigData config;
+    config.parseFile(config_file);
+    unsigned char _allowRelay = 1;
+    config.getValue("AllowRelay", _allowRelay);
 
     // Create the public socket that allows APIs to find us.
     JrSocket publicSocket(std::string("JuniorRTE"));
@@ -87,7 +102,6 @@ int main(int argc, char* argv[])
             {
                 // This message was intended for the RTE, and therefore must
                 // be a connection request.  Response appropriately.
-                printf("Received connection request for %ld\n", msg->getSourceId().val);
                 Message response;
                 response.setSourceId(0);
                 response.setDestinationId(msg->getSourceId());
@@ -142,10 +156,11 @@ int main(int argc, char* argv[])
                 msg = msglist.front();
                 msglist.pop_front();
 
-                // If this message is intended for a local client (and a 
+                // If relay is off, or this message is intended for a local client (and a 
                 // local client only), send it only on the socket interface.
-                if (std::find(_clients.begin(), _clients.end(), msg->getSourceId().val) !=
-                    _clients.end())
+                if (!_allowRelay || 
+                    (std::find(_clients.begin(), _clients.end(), msg->getSourceId().val) !=
+                    _clients.end()))
                 {
                     // Match found.  Send to the socket interface.
                     publicSocket.sendMsg(*msg);
@@ -154,8 +169,6 @@ int main(int argc, char* argv[])
                 {
                     // This message is either not intended for us, or contains
                     // wildcard characters.  Send to all available interfaces.
-                        
-                    //printf("Received message from %ld to %ld\n", msg.getSourceId().val, msg.getDestinationId().val);
                     for ( std::list<Transport*>::iterator tport = _transports.begin(); 
                         tport != _transports.end(); ++tport)
                           (*tport)->sendMsg(*msg);

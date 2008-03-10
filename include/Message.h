@@ -1,10 +1,22 @@
-//  Message class - an abstract class on which all messages are based
+/*! 
+ ***********************************************************************
+ * @file      Message.h
+ * @author    Dave Martin, DeVivo AST, Inc.  
+ * @date      2008/03/03
+ *
+ * @attention Copyright (C) 2008
+ * @attention DeVivo AST, Inc.
+ * @attention All rights reserved
+ ************************************************************************
+ */
 #ifndef  __MESSAGE_H
 #define  __MESSAGE_H
 
-
 #include "Archive.h"
 #include "Types.h"
+
+namespace DeVivo {
+namespace Junior {
 
 // Define a Message Code
 typedef unsigned short MessageCode;
@@ -204,7 +216,7 @@ inline void Message::getPayload(unsigned int& size, char*& data)
     size = _payload.getArchiveLength();
     data = _payload.getArchive();
 }
-
+}} // namespace DeVivo::Junior
 
 #endif
 

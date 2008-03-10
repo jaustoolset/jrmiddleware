@@ -1,8 +1,21 @@
-// Provides header compression services 
+/*! 
+ ***********************************************************************
+ * @file      HeaderCompression.h
+ * @author    Dave Martin, DeVivo AST, Inc.  
+ * @date      2008/03/03
+ *
+ * @attention Copyright (C) 2008
+ * @attention DeVivo AST, Inc.
+ * @attention All rights reserved
+ ************************************************************************
+ */
 #ifndef __HEADER_COMPRESSION_H
 #define __HEADER_COMPRESSION__H
 
 #include <map>
+
+namespace DeVivo {
+namespace Junior {
 
 static unsigned char counter = 0;
 
@@ -208,7 +221,7 @@ inline void HeaderCompressionTable::update( JAUS_ID id,  JUDPArchive& msg )
     // Update the table with the new entry
     _map[id][num] = entry;
 }
-
+}} // namespace DeVivo::Junior
 #endif
 
 

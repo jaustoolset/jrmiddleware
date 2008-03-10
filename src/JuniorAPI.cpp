@@ -1,9 +1,19 @@
-// This is the principle file for the realization of the Junior API.
-// In reality, this "implementation" simply serves as public access
-// to the JuniorMgr class, which does the real work.
+/*! 
+ ***********************************************************************
+ * @file      JuniorAPI.cpp
+ * @author    Dave Martin, DeVivo AST, Inc.  
+ * @date      2008/03/03
+ *
+ * @attention Copyright (C) 2008
+ * @attention DeVivo AST, Inc.
+ * @attention All rights reserved
+ ************************************************************************
+ */
 #include "JuniorAPI.h"
 #include "JuniorAPI.hpp"
 #include "JuniorMgr.h"
+
+using namespace DeVivo::Junior;
 
 JrErrorCode sendto(int handle,
            unsigned long destination, 

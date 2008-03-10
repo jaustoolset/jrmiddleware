@@ -1,13 +1,23 @@
-// This is the principle file for the realization of the Junior API.
-// Note that the interface itself is completely function, but the "handle"
-// represents an object that manages the connection to the Junior RTE.
+/*! 
+ ***********************************************************************
+ * @file      JuniorMgr.h
+ * @author    Dave Martin, DeVivo AST, Inc.  
+ * @date      2008/03/03
+ *
+ * @attention Copyright (C) 2008
+ * @attention DeVivo AST, Inc.
+ * @attention All rights reserved
+ ************************************************************************
+ */
 #include "JrSockets.h"
 #include "JuniorAPI.h"
 #include "Message.h"
 #include "OS.h"
-#include "ConfigData.h"
 #include <stdio.h>
 #include <stdlib.h>
+
+namespace DeVivo {
+namespace Junior {
 
 typedef std::pair<JAUS_ID, unsigned short> MsgId;
 typedef std::pair<unsigned long, MsgId> TimeStampedMsgId;
@@ -49,11 +59,11 @@ private:
     JrSocket*          _socket_ptr;
     unsigned short     _message_counter;
     MsgIdList          _recentMsgs;
-    ConfigData         _config;
 
     // Configuration data
     unsigned short _maxMsgHistory;      // as a message count
-    unsigned short _oldMsgTimeout; // in seconds
+    unsigned short _oldMsgTimeout;      // in seconds
+    unsigned char  _detectDuplicates; 
 };
 
 inline TimeStampedMsgListIter JuniorMgr::searchMsgList(
@@ -70,3 +80,5 @@ inline TimeStampedMsgListIter JuniorMgr::searchMsgList(
     }
     return list.end();
 }
+
+}} // namespace DeVivo::Junior

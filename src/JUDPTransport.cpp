@@ -1,4 +1,14 @@
-//  JAUS UDP Transport implementation
+/*! 
+ ***********************************************************************
+ * @file      JUDPTransport.cpp
+ * @author    Dave Martin, DeVivo AST, Inc.  
+ * @date      2008/03/03
+ *
+ * @attention Copyright (C) 2008
+ * @attention DeVivo AST, Inc.
+ * @attention All rights reserved
+ ************************************************************************
+ */
 
 #include "JUDPTransport.h"
 #include "Message.h"
@@ -6,6 +16,8 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
+
+using namespace DeVivo::Junior;
 
 #ifdef WINDOWS
 #define getSocketError WSAGetLastError()
@@ -45,11 +57,11 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     unsigned short port = 3794;
     config.getValue("UDP_Port", port);
     unsigned short multicast_TTL = 1;
-    config.getValue("MULTICAST_TTL", multicast_TTL);
+    config.getValue("MulticastTTL", multicast_TTL);
     std::string multicast_addr = "224.1.0.1";
-    config.getValue("MULTICAST_ADDR", multicast_addr);
+    config.getValue("MulticastAddr", multicast_addr);
     int buffer_size = 10000;
-    config.getValue("SND_RCV_BUFFER_SIZE", buffer_size);
+    config.getValue("MaxBufferSize", buffer_size);
 
     // Set-up the multicast address based on config data
     _multicastAddr.port = port;

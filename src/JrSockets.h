@@ -1,10 +1,23 @@
-//  JAUS Router Socket implementation
-#ifndef  __JR_SOCKETS_H
+/*! 
+ ***********************************************************************
+ * @file      JrSockets.h
+ * @author    Dave Martin, DeVivo AST, Inc.  
+ * @date      2008/03/03
+ *
+ * @attention Copyright (C) 2008
+ * @attention DeVivo AST, Inc.
+ * @attention All rights reserved
+ ************************************************************************
+ */
+#ifndef __JR_SOCKETS_H
 #define __JR_SOCKETS_H
 
 #include "Transport.h"
 #include "AddressMap.h"
 #include "OS.h"
+
+namespace DeVivo {
+namespace Junior {
 
 // Since Windows and UNIX use different values for socket
 // identifiers (strings versus handles), create an environment
@@ -53,7 +66,7 @@ protected:
     int sock;
 #endif
 };
-
+}} // namespace DeVivo::Junior
 #endif
 
 

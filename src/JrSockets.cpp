@@ -1,9 +1,21 @@
-//  JAUS Router Socket implementation
+/*! 
+ ***********************************************************************
+ * @file      JrSockets.cpp
+ * @author    Dave Martin, DeVivo AST, Inc.  
+ * @date      2008/03/03
+ *
+ * @attention Copyright (C) 2008
+ * @attention DeVivo AST, Inc.
+ * @attention All rights reserved
+ ************************************************************************
+ */
 #include "JrSockets.h"
 #include "ConfigData.h"
 #include <fcntl.h>
 #include <errno.h>
 #include <sstream>
+
+using namespace DeVivo::Junior;
 
 #ifdef WINDOWS
 #define SOCK_PATH "\\\\.\\mailslot\\"
@@ -234,7 +246,7 @@ Transport::TransportError JrSocket::initialize(std::string config_file)
     ConfigData config;
     config.parseFile(config_file);
     int buffer_size = 10000;
-    config.getValue("SND_RCV_BUFFER_SIZE", buffer_size);
+    config.getValue("MaxBufferSize", buffer_size);
 
     // Increase the size of the send/receive buffers
     int length = sizeof(buffer_size);

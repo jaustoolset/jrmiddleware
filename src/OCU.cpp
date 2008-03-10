@@ -1,7 +1,14 @@
-//  DEVIVO HEADER GOES HERE!!!
-
-// The following file represents the 'main' application for the 
-// OCU portion of the JAUS Guide Demonstration.
+/*! 
+ ***********************************************************************
+ * @file      OCU.cpp
+ * @author    Dave Martin, DeVivo AST, Inc.  
+ * @date      2008/03/03
+ *
+ * @attention Copyright (C) 2008
+ * @attention DeVivo AST, Inc.
+ * @attention All rights reserved
+ ************************************************************************
+ */
 #define JR_SEND_MESSAGE_ID
 #include "JuniorAPI.h"
 #include <stdio.h>
@@ -11,7 +18,7 @@
 
 const int MaxBufferSize = 50000;
 
-
+using namespace DeVivo::Junior;
 
 int main(int argc, char* argv[])
 {

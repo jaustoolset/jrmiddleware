@@ -1,10 +1,23 @@
-//  JAUS UDP Transport implementation
-#ifndef  __JAUS_UDP_TRANSPORT_H
+/*! 
+ ***********************************************************************
+ * @file      JUDPTransport.h
+ * @author    Dave Martin, DeVivo AST, Inc.  
+ * @date      2008/03/03
+ *
+ * @attention Copyright (C) 2008
+ * @attention DeVivo AST, Inc.
+ * @attention All rights reserved
+ ************************************************************************
+ */
+#ifndef __JAUS_UDP_TRANSPORT_H
 #define __JAUS_UDP_TRANSPORT_H
 
 #include "Transport.h"
 #include "HeaderCompression.h"
 #include "AddressMap.h"
+
+namespace DeVivo {
+namespace Junior {
 
 // Define a helper class
 class IP_ADDRESS
@@ -52,7 +65,7 @@ protected:
     bool compressHeader  ( JUDPArchive&, JAUS_ID );
 
 };
-
+}} // namespace DeVivo::Junior
 #endif
 
 

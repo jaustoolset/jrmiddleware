@@ -1,9 +1,22 @@
-//  Transport class - an abstract class for a Transport instantiation
+/*! 
+ ***********************************************************************
+ * @file      Transport.h
+ * @author    Dave Martin, DeVivo AST, Inc.  
+ * @date      2008/03/03
+ *
+ * @attention Copyright (C) 2008
+ * @attention DeVivo AST, Inc.
+ * @attention All rights reserved
+ ************************************************************************
+ */
 #ifndef  __TRANSPORT_H
 #define __TRANSPORT_H
 
 #include <string>
 #include "Message.h"
+
+namespace DeVivo {
+namespace Junior {
 
 class Transport
 {
@@ -52,9 +65,7 @@ inline std::string Transport::enumToString( TransportError code )
             return std::string("Unkown error code");
     }
 }
-
-
-      
+}} // namespace DeVivo::Junior    
 
 #endif
 

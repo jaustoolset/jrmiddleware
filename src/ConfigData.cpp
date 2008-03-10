@@ -1,5 +1,17 @@
-//  Configuration Data class - maintains simple name=value pairings
+/*! 
+ ***********************************************************************
+ * @file      ConfigData.cpp
+ * @author    Dave Martin, DeVivo AST, Inc.  
+ * @date      2008/03/03
+ *
+ * @attention Copyright (C) 2008
+ * @attention DeVivo AST, Inc.
+ * @attention All rights reserved
+ ************************************************************************
+ */
 #include "ConfigData.h"
+
+using namespace DeVivo::Junior;
 
 ConfigData::ConfigError ConfigData::parseFile( std::string filename )
 {
@@ -29,6 +41,10 @@ ConfigData::ConfigError ConfigData::parseLine( std::string line )
 {
     // Return immediately if the string is empty
     if (line.empty()) return Ok;
+
+    // Check for comment lines
+    deleteWhitespace(line);
+    if (line[0]=='#') return Ok;
 
     // Make sure it's a valid name=value pair
     if (line.find("=") == std::string::npos)

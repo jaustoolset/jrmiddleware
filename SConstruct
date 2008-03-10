@@ -1,3 +1,13 @@
+# ***********************************************************************
+# * @file      SConstruct
+# * @author    Dave Martin, DeVivo AST, Inc.  
+# * @date      2008/03/03
+# *
+# * @attention Copyright (C) 2008
+# * @attention DeVivo AST, Inc.
+# * @attention All rights reserved
+# ************************************************************************
+
 import os
 baseEnv = Environment(ENV=os.environ)
 

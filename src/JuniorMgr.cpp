@@ -1,15 +1,30 @@
-// This is the principle file for the realization of the Junior API.
-// Note that the interface itself is completely function, but the "handle"
-// represents an object that manages the connection to the Junior RTE.
+/*! 
+ ***********************************************************************
+ * @file      JuniorMgr.cpp
+ * @author    Dave Martin, DeVivo AST, Inc.  
+ * @date      2008/03/03
+ *
+ * @attention Copyright (C) 2008
+ * @attention DeVivo AST, Inc.
+ * @attention All rights reserved
+ ************************************************************************
+ */
 #include "JuniorMgr.h"
+#include "ConfigData.h"
 #include <sstream>
 #include <algorithm>
+
+using namespace DeVivo::Junior;
+
+const unsigned int MaxMsgSize = 4079;
 
 JuniorMgr::JuniorMgr()
 {
     // Initialize config data
+    _message_counter = 1;
     _maxMsgHistory = 100;   // as a message count
     _oldMsgTimeout = 10;    // in seconds
+    _detectDuplicates =1;   
 }
 
 JuniorMgr::~JuniorMgr()
@@ -37,6 +52,9 @@ void JuniorMgr::sendAckMsg( Message* incoming )
 // Helper function to detect duplicate messages
 bool JuniorMgr::isDuplicateMsg(Message* msg)
 {
+    // This checking can be configured off.
+    if (!_detectDuplicates) return false;
+
     MsgIdListIter iter = _recentMsgs.begin();
     while (iter != _recentMsgs.end())
     {
@@ -214,12 +232,17 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
         // and we meet the size limit (broadcasts cannot be parsed into
         // multiple packets.
         flags = 0;
-        if (size > 4079)
+        if (size > MaxMsgSize)
         {
             printf("Broadcast of buffers larger than 4079 bytes is not supported\n");
             return Overflow;
         }
     }
+
+    // If we're not trying to detect duplicate messages, we follow JAUS 5669, v1.
+    // As a result, the sequence number must start at zero for large data sets.
+    if ((size > MaxMsgSize) && (!_detectDuplicates))
+        _message_counter = 0;
 
     // We can never send more than 4079 bytes in a single
     // message, so break up large data sets.
@@ -233,11 +256,12 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
         msg.setPriority(priority);
         msg.setMessageCode(code);
         if (flags & 0x01) msg.setAckNakFlag(1);
-        msg.setSequenceNumber(++_message_counter);
+        msg.setSequenceNumber(_message_counter);
+        _message_counter++;
 
         // Set the payload, being careful not to exceed
         // 4079 bytes on any individual message.
-        unsigned int payload_size = umin(4079, size - bytes_sent);
+        unsigned int payload_size = umin(MaxMsgSize, size - bytes_sent);
         msg.setPayload(payload_size, &buffer[bytes_sent]);
 
         // Fill in the data control flags, so the receiver
@@ -389,7 +413,8 @@ JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
     JrSleep(2000);
 
     // Parse the config file
-    _config.parseFile(config_file);
+    ConfigData config;
+    config.parseFile(config_file);
 
     // The name of our local socket is the string form of our ID.
     std::stringstream name; name << id;
@@ -438,8 +463,9 @@ JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
     _id.val     = id;
 
     // Initialize config data from file
-    _config.getValue("MaxMsgHistory", _maxMsgHistory);
-    _config.getValue("OldMsgTimeout", _oldMsgTimeout);
+    config.getValue("MaxMsgHistory", _maxMsgHistory);
+    config.getValue("OldMsgTimeout", _oldMsgTimeout);
+    config.getValue("DropDuplicateMsgs", _detectDuplicates);
 
     return Ok;
 }

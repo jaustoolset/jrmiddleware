@@ -1,3 +1,13 @@
+ #***********************************************************************
+ #* @file      SConscript
+ #* @author    Dave Martin, DeVivo AST, Inc.  
+ #* @date      2008/03/03
+ #*
+ #* @attention Copyright (C) 2008
+ #* @attention DeVivo AST, Inc.
+ #* @attention All rights reserved
+ #************************************************************************
+ 
 import os
 Import( 'baseEnv' )
 
@@ -9,15 +19,13 @@ API_Files = [
     'ConfigData.cpp'
 ]
 
-
-OCUFiles = [
-    'OCU.cpp'
-]
+OCUFiles = [ 'OCU.cpp' ]
 
 RTE_Files =[
     'JuniorRTE.cpp',
     'JUDPTransport.cpp'
 ]
+
 if os.name == "nt":  
 	libs =['WSock32.lib', 'Junior.lib']
 else:
