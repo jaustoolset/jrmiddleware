@@ -118,9 +118,6 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     setsockopt(_socket, SOL_SOCKET, SO_RCVBUF, (char*)&buffer_size, length);
     setsockopt(_socket, SOL_SOCKET, SO_SNDBUF, (char*)&buffer_size, length);
 
-    getsockopt(_socket, SOL_SOCKET, SO_SNDBUF, (char*)&buffer_size, &length);
-    printf("Configured UDP socket for size: %ld\n", buffer_size);
-
     return Ok;
 }
 

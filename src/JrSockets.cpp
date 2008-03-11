@@ -20,7 +20,7 @@ using namespace DeVivo::Junior;
 #ifdef WINDOWS
 #define SOCK_PATH "\\\\.\\mailslot\\"
 #else
-#define SOCK_PATH "/"
+#define SOCK_PATH "."
 #endif
 
 JrSocket::JrSocket(std::string name):
@@ -221,6 +221,13 @@ Transport::TransportError JrSocket::initialize(std::string config_file)
     }
 #else
 
+    // Before creating a sock, make sure that UNIX sockets
+    // support enough data grams to parse a large message
+    // into 4096 byte chunks.
+    int qlen; int qlen_size = sizeof(int);
+    sysctl("net.unix.max_dgram_qlen", &qlen, &qlen_size, NULL, qlen_size);
+    printf("Got dgram_qlen = %ld\n", qlen);
+
     // Create the socket
     sock = socket(AF_UNIX, SOCK_DGRAM, 0);
     if (sock==-1) return InitFailed;
@@ -254,9 +261,6 @@ Transport::TransportError JrSocket::initialize(std::string config_file)
     int length = sizeof(buffer_size);
     setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)&buffer_size, length);
     setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&buffer_size, length);
-
-    getsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&buffer_size, &length);
-    printf("Configured socket for size: %ld\n", buffer_size);
 
 #endif
 

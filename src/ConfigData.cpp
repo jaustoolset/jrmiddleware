@@ -67,6 +67,7 @@ ConfigData::ConfigError ConfigData::parseLine( std::string line )
 
 void ConfigData::deleteWhitespace(std::string& in)
 {
+    if (in.empty()) return;
     in = in.substr(in.find_first_not_of(" "), in.find_last_not_of(" ")+1);
 }
     
