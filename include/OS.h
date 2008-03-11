@@ -20,7 +20,6 @@
     #include <sys/socket.h>
     #include <unistd.h>
     #include <sys/un.h>
-    #include <sys/sysctl.h>
     #include <arpa/inet.h>
 #endif
 

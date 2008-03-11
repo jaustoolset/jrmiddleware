@@ -154,6 +154,13 @@ Transport::TransportError JrSocket::recvMsg(MessageList& msglist)
 
 #else
 
+        // See if we have anything waiting before we call recvfrom
+        struct timeval timeout;
+        timeout.tv_sec=0; timeout.tv_usec=0;
+        fd_set set; FD_ZERO(&set); FD_SET(sock, &set);
+        if (select(sock+1, &set, NULL, NULL, &timeout) == 0) break;
+
+        // Getting here means we have a message.  Read and process it.
         struct sockaddr_un addr;
         memset(addr.sun_path, 0, sizeof(addr.sun_path));
         addr.sun_family = AF_UNIX;
@@ -221,13 +228,6 @@ Transport::TransportError JrSocket::initialize(std::string config_file)
     }
 #else
 
-    // Before creating a sock, make sure that UNIX sockets
-    // support enough data grams to parse a large message
-    // into 4096 byte chunks.
-    int qlen; int qlen_size = sizeof(int);
-    sysctl("net.unix.max_dgram_qlen", &qlen, &qlen_size, NULL, qlen_size);
-    printf("Got dgram_qlen = %ld\n", qlen);
-
     // Create the socket
     sock = socket(AF_UNIX, SOCK_DGRAM, 0);
     if (sock==-1) return InitFailed;
@@ -248,8 +248,8 @@ Transport::TransportError JrSocket::initialize(std::string config_file)
     }
 
     // Make it nonblocking
-    int flags = fcntl(sock, F_GETFL);
-    fcntl( sock, F_SETFL, flags | O_NONBLOCK );
+    //int flags = fcntl(sock, F_GETFL);
+    //fcntl( sock, F_SETFL, flags | O_NONBLOCK );
 
     // Read the configuration file for buffer size info
     ConfigData config;

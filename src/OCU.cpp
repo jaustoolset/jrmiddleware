@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
                 //if ((msgcount % 500) == 0)
                     printf("Incoming Msg: Sender = %ld, Count = %ld, ID = %ld, Size = %ld)\n", sender, msgcount, msg_id, buffersize);
                 prevMsg = msgcount;
-            }
+            }               
 
             JrSleep(1);
         }
