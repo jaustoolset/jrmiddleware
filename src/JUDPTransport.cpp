@@ -86,17 +86,6 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
         return InitFailed;
     }
 
-    //
-    // Make it non-blocking
-    //
-#if WINDOWS
-    unsigned long flags = 1;
-    ioctlsocket(_socket, FIONBIO, &flags);
-#else
-    int flags = fcntl(_socket, F_GETFL);
-    fcntl( _socket, F_SETFL, flags | O_NONBLOCK );
-#endif
-
     // 
     // Set-up for multicast:
     //  1) No loopback
@@ -230,14 +219,18 @@ Transport::TransportError JUDPTransport::recvMsg(MessageList& msglist)
     // no messages in the buffer (or we received 10 packets).
     for (int i=0; i<10; i++)
     {
+        // See if we have anything waiting before we call recvfrom
+        struct timeval timeout;
+        timeout.tv_sec=0; timeout.tv_usec=0;
+        fd_set set; FD_ZERO(&set); FD_SET(_socket, &set);
+        if (select(_socket+1, &set, NULL, NULL, &timeout) == 0) break;
+
         // Check the socket for a message
         struct sockaddr_in source;
         int source_length = sizeof(source);
         int result = recvfrom(_socket, buffer, 5000, 0,
                               (struct sockaddr*) &source, 
                               (socklen_t*) &source_length);
-         
-        // If there are no new messages, stop checking.
         if (result <= 0) break;
 
         //
