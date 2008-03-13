@@ -113,7 +113,6 @@ int main(int argc, char* argv[])
             {
                 // This message was intended for the RTE, and therefore must
                 // be a connection request.  Response appropriately.
-                printf("Received connection request from %ld\n", msg->getSourceId().val);
                 Message response;
                 response.setSourceId(0);
                 response.setDestinationId(msg->getSourceId());
