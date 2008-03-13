@@ -45,6 +45,7 @@ JrErrorCode broadcast(int handle,
               int priority);
 
 JrErrorCode connect(unsigned long id, char* config_file, int* handle);
+JrErrorCode disconnect(int handle);
 
 #else
 
@@ -70,6 +71,8 @@ JrErrorCode broadcast(int handle,
               int priority);
 
 JrErrorCode connect(unsigned long id, char* config_file, int* handle);
+JrErrorCode disconnect(int handle);
+
 #endif
 
 #endif

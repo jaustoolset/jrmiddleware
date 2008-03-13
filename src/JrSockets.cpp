@@ -20,7 +20,7 @@ using namespace DeVivo::Junior;
 #ifdef WINDOWS
 #define SOCK_PATH "\\\\.\\mailslot\\"
 #else
-#define SOCK_PATH "."
+#define SOCK_PATH "/tmp/"
 #endif
 
 JrSocket::JrSocket(std::string name):
@@ -34,6 +34,16 @@ JrSocket::JrSocket(std::string name):
 
 JrSocket::~JrSocket()
 {
+    if (sock) 
+    {
+#ifdef WINDOWS
+        CloseHandle(sock);
+#else
+        std::stringstream s; s << SOCK_PATH; s << _socket_name;
+        close(sock);
+        unlink(s.str().c_str());
+#endif
+    }
 }
 
 #ifdef WINDOWS
@@ -79,18 +89,15 @@ Transport::TransportError JrSocket::sendMsg(Message& msg, SocketId sockname)
     bool fSuccess = WriteFile( sockname, archive.getArchive(), 
         archive.getArchiveLength(), &cbWritten, NULL);
     if (!fSuccess || (cbWritten != archive.getArchiveLength())) 
-    {
-        printf("Unable to write to local mailslot.  Message dropped"); 
         return Failed;
-    }
-
 #else
     struct sockaddr_un addr;
     memset(addr.sun_path, 0, sizeof(addr.sun_path));
     addr.sun_family = AF_UNIX;
     memcpy(addr.sun_path, sockname.c_str(), sockname.length());
-    sendto(sock, archive.getArchive(), archive.getArchiveLength(), 0,
+    int ret = sendto(sock, archive.getArchive(), archive.getArchiveLength(), 0,
        (struct sockaddr *)&addr, sizeof(struct sockaddr_un));
+    if (ret != archive.getArchiveLength()) return Failed;
 #endif
 
     return Ok;
@@ -246,10 +253,6 @@ Transport::TransportError JrSocket::initialize(std::string config_file)
         printf("Bind failed for local socket(%s).  err=%d\n", s.str().c_str(), errno);
         return InitFailed;
     }
-
-    // Make it nonblocking
-    //int flags = fcntl(sock, F_GETFL);
-    //fcntl( sock, F_SETFL, flags | O_NONBLOCK );
 
     // Read the configuration file for buffer size info
     ConfigData config;

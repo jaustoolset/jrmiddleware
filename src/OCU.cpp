@@ -14,11 +14,19 @@
 #include <stdio.h>
 #include <string>
 #include <sstream>
+#include <signal.h>
 #include "OS.h"
 
 const int MaxBufferSize = 50000;
 
 using namespace DeVivo::Junior;
+
+// Define a signal handler, so we can clean-up properly
+static int exit_flag = 0;
+static void handle_exit_signal( int signum )
+{
+    exit_flag = 1;
+}
 
 int main(int argc, char* argv[])
 {
@@ -47,6 +55,11 @@ int main(int argc, char* argv[])
         return -1;
     }
 
+    // Catch the termination signals
+    signal( SIGINT, handle_exit_signal );
+    signal( SIGTERM, handle_exit_signal );
+    signal( SIGABRT, handle_exit_signal );
+
     // Make a data buffer for incoming/outgoing messages.
     char buffer[MaxBufferSize];
     int counter = 0;         
@@ -54,12 +67,11 @@ int main(int argc, char* argv[])
     unsigned short datasize;
     int prevMsg  =0;
 
-    // Broadcast a message, announcing our availability.
-    //broadcast(handle, 0, buffer, 15);
+    // Randomize
     srand(JrGetTimestamp());
 
     // Do stuff
-    while(1)
+    while(!exit_flag)
     {
         // Create a random message size.
         do
@@ -72,19 +84,11 @@ int main(int argc, char* argv[])
 
         if (dest != 0)
         {
-//            sprintf(buffer, "This is message %d.\0", ++counter);
-//            if (int result = sendto(handle, dest, strlen(buffer), buffer, 6, 1) != 0)
-//                printf("Sendto failed (%d)\n", result);
-            
-//            sprintf(buffer, "Urgent broadcast %d.\0", ++counter);
-//            broadcast(handle, strlen(buffer), buffer, 15);
-
-
             // Send a message of the given size, with a counter and size element
-            // included
             *((int*)buffer) = ++counter;
             *((unsigned short*) &buffer[4]) = datasize;
             *((unsigned short*) &buffer[6]) = msg_id;
+
             //if ((counter % 500) == 0)
                 printf("Sending message %ld (id=%ld, size=%ld)\n", counter, msg_id, datasize);
             JrErrorCode result = sendto(handle, dest, msg_id, datasize, buffer, 6, 0);
@@ -106,7 +110,7 @@ int main(int argc, char* argv[])
                 if (size != buffersize) printf("WARNING: SIZE INCONSISTENT (msg=%ld, buffer=%ld)\n", size, buffersize);
                 if (id != msg_id) printf("WARNING: ID INCONSISTENT (msg=%ld, buffer=%ld)\n", msg_id, id);
                 if ((prevMsg+1) != msgcount) printf("WARNING: Messages not in sequence (prev=%ld, this=%ld)\n", prevMsg, msgcount);
-                //if ((msgcount % 500) == 0)
+                if ((msgcount % 500) == 0)
                     printf("Incoming Msg: Sender = %ld, Count = %ld, ID = %ld, Size = %ld)\n", sender, msgcount, msg_id, buffersize);
                 prevMsg = msgcount;
             }               
@@ -114,6 +118,9 @@ int main(int argc, char* argv[])
             JrSleep(1);
         }
     }
+
+    // clean-up
+    disconnect(handle);
 }
 
   

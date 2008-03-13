@@ -23,6 +23,7 @@ using namespace DeVivo::Junior;
 #define getSocketError WSAGetLastError()
 #else
 #define getSocketError errno
+#define closesocket close
 #endif
 
 
@@ -35,11 +36,9 @@ JUDPTransport::JUDPTransport():
 {
 }
 
-static std::map< unsigned long, Archive> Messages;
-
-
 JUDPTransport::~JUDPTransport()
 {
+    if (_socket > 0) closesocket(_socket);
 }
 
 Transport::TransportError JUDPTransport::initialize( std::string filename )

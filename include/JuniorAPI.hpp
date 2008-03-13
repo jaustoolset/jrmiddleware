@@ -53,6 +53,8 @@ public:
     JrErrorCode connect( unsigned long id, 
                          char* config_file );
 
+    JrErrorCode disconnect( );
+
 private:
     int handle;
 };

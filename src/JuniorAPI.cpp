@@ -95,6 +95,14 @@ JrErrorCode connect(unsigned long id, char* config_file, int* handle)
     return ret;
 }
 
+JrErrorCode disconnect(int handle)
+{    
+    if (handle == 0) return NotInitialized;
+    JuniorMgr* mgr = (JuniorMgr*) handle;
+    delete(mgr);
+    return Ok;
+}
+
 // Define the class implementation, too, so we can have both
 // a functional and object oriented interface.
 JuniorAPI::JuniorAPI():
@@ -156,4 +164,15 @@ JrErrorCode JuniorAPI::connect( unsigned long id,
     else
         handle = (int)mgr;
     return ret;
+}
+
+JrErrorCode JuniorAPI::disconnect( )
+{
+    // Delete the manager instance, if we've got one.
+    if (handle != 0)
+    {
+        JuniorMgr* mgr = (JuniorMgr*) handle;
+        delete mgr;
+    }
+    return Ok;
 }

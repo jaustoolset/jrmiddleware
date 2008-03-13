@@ -18,7 +18,8 @@ using namespace DeVivo::Junior;
 
 const unsigned int MaxMsgSize = 4079;
 
-JuniorMgr::JuniorMgr()
+JuniorMgr::JuniorMgr():
+    _socket_ptr(NULL)
 {
     // Initialize config data
     _message_counter = 1;
@@ -29,6 +30,7 @@ JuniorMgr::JuniorMgr()
 
 JuniorMgr::~JuniorMgr()
 {
+    if (_socket_ptr) delete(_socket_ptr);
 }
 
 unsigned int JuniorMgr::umin(unsigned int x, unsigned int y)

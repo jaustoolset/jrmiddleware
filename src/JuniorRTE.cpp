@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <algorithm>
+#include <signal.h>
 #include "ConfigData.h"
 #include "JrSockets.h"
 #include "JUDPTransport.h"
@@ -25,15 +26,20 @@ using namespace DeVivo::Junior;
 typedef std::list<unsigned long>     ConnectionList;
 typedef std::list<JAUS_ID>::iterator ConnectionListIter;
 
+// Define a signal handler, so we can clean-up properly
+static int exit_flag = 0;
+static void handle_exit_signal( int signum )
+{
+    exit_flag = 1;
+}
+
 // Main loop
 int main(int argc, char* argv[])
 {
     printf("Hello, and welcome to the JuniorRTE\n");
 
-    // Fork off a child and kill the parent so that we get adopted by the O/S
-#if 0
-    int i=fork();
-    if (i != 0) exit(0);
+    // For linux, we need to break from the parent's signals
+#ifndef WINDOWS
     setsid();
 #endif
 
@@ -58,6 +64,11 @@ int main(int argc, char* argv[])
         printf("Unable to initialize internal socket.  Exiting with error...\n");
         exit(1);
     }
+
+    // Catch the termination signals
+    signal( SIGINT, handle_exit_signal );
+    signal( SIGTERM, handle_exit_signal );
+    signal( SIGABRT, handle_exit_signal );
 
     // Maintain a list of connected clients.  Note that we store the
     // raw unsigned long, rather than the JAUS_ID, so that operator== means 
@@ -84,7 +95,7 @@ int main(int argc, char* argv[])
     Message* msg;
 
     // Process messages.
-    while(1)
+    while(!exit_flag)
     {
         // Wait 1 millisecond so we don't hog the CPU
         JrSleep(1);
@@ -102,6 +113,7 @@ int main(int argc, char* argv[])
             {
                 // This message was intended for the RTE, and therefore must
                 // be a connection request.  Response appropriately.
+                printf("Received connection request from %ld\n", msg->getSourceId().val);
                 Message response;
                 response.setSourceId(0);
                 response.setDestinationId(msg->getSourceId());
@@ -179,4 +191,7 @@ int main(int argc, char* argv[])
             }
         }
     }
+
+    // Received termination signal
+    printf("Shutting down Junior RTE...\n");
 }
