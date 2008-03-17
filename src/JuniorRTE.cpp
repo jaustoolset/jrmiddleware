@@ -170,7 +170,7 @@ int main(int argc, char* argv[])
                 // If relay is off, or this message is intended for a local client (and a 
                 // local client only), send it only on the socket interface.
                 if (!_allowRelay || 
-                    (std::find(_clients.begin(), _clients.end(), msg->getSourceId().val) !=
+                    (std::find(_clients.begin(), _clients.end(), msg->getDestinationId().val) !=
                     _clients.end()))
                 {
                     // Match found.  Send to the socket interface.

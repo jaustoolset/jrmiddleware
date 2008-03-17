@@ -13,6 +13,7 @@
 #include "JUDPTransport.h"
 #include "Message.h"
 #include "ConfigData.h"
+#include "OS.h"
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -101,6 +102,24 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     mreq.imr_multiaddr.s_addr = _multicastAddr.addr; 
     setsockopt (_socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (const char*) &mreq, sizeof(mreq));
 
+    // Using INADDR_ANY causes us to join the multicast group, but only
+    // on the default NIC.  When multiple NICs are present, we need to join
+    // each manually.  Loop through all available addresses...
+    char ac[80];
+    if (gethostname(ac, sizeof(ac)) == 0) 
+    {
+        struct hostent *phe = gethostbyname(ac);
+        if (phe != 0) 
+        {
+            for (int i = 0; phe->h_addr_list[i] != 0; ++i) 
+            {
+                mreq.imr_interface = *(in_addr*)phe->h_addr_list[i];
+                setsockopt (_socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, 
+                    (const char*) &mreq, sizeof(mreq));
+            }
+        }
+    }
+
     // Increase the size of the send/receive buffers
     int length = sizeof(buffer_size);
     setsockopt(_socket, SOL_SOCKET, SO_RCVBUF, (char*)&buffer_size, length);
@@ -181,7 +200,7 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
             dest.sin_addr.s_addr = _map.getList()[i].second.addr;
             dest.sin_port = _map.getList()[i].second.port;
             
-            // Lastly, send the message.         
+            // Lastly, send the message.  
             int val =sendto(_socket, payload.getArchive(), payload.getArchiveLength(),
                        0, (struct sockaddr*) &dest, sizeof(dest));// < 0 )
             if (val < 0)

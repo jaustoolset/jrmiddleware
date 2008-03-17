@@ -33,6 +33,10 @@ class IP_ADDRESS
        if ((addr == in.addr) && (port == in.port)) return true;
        return false;
    }
+   void print()
+   {
+       printf("%s:%ld", inet_ntoa(*(in_addr*) &addr), ntohs(port));
+   }
     
    unsigned long addr;
    unsigned short port;
