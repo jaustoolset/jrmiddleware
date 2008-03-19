@@ -33,7 +33,8 @@ JUDPTransport::JUDPTransport():
     _socket(0),
     _inTable(),
     _outTable(),
-    _multicastAddr()
+    _multicastAddr(),
+    _interfaces()
 {
 }
 
@@ -49,6 +50,16 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     WSADATA temp;
     WSAStartup(0x22, &temp);
 #endif
+
+    // Get a list of all network interfaces on this node
+    char ac[80];
+    if (gethostname(ac, sizeof(ac)) == 0) 
+    {
+        struct hostent *phe = gethostbyname(ac);
+        if (phe != 0) 
+            for (int i = 0; phe->h_addr_list[i] != 0; ++i) 
+                _interfaces.push_back( *(in_addr*)phe->h_addr_list[i] );
+    }
 
     // Read the configuration file, and set-up defaults for anything
     // that isn't specified.
@@ -71,7 +82,7 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     _socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (_socket < 0)
     {
-        printf("Unable to create socket for UDP communication.\n");
+        //printf("Unable to create socket for UDP communication.\n");
         return InitFailed;
     }
 
@@ -82,9 +93,14 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     sockAddr.sin_port = htons(port);
     if (bind(_socket,(struct sockaddr*)&sockAddr,sizeof(sockAddr))<0)
     {
-        printf("Unable to bind to port %ld.  Returning failed.\n", port);
+        //printf("Unable to bind to port %ld.  Returning failed.\n", port);
         return InitFailed;
     }
+
+    // Increase the size of the send/receive buffers
+    int length = sizeof(buffer_size);
+    setsockopt(_socket, SOL_SOCKET, SO_RCVBUF, (char*)&buffer_size, length);
+    setsockopt(_socket, SOL_SOCKET, SO_SNDBUF, (char*)&buffer_size, length);
 
     // 
     // Set-up for multicast:
@@ -93,11 +109,10 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     /// 3) Send out our socket.
     //  4) Join the multicast group set by configuration file
     //
-    char loop = 0;
+    char loop = 0; struct ip_mreq mreq;
     setsockopt(_socket, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop));
     setsockopt(_socket, IPPROTO_IP, IP_MULTICAST_TTL, (const char*) &multicast_TTL, sizeof(multicast_TTL));
-    setsockopt (_socket, IPPROTO_IP, IP_MULTICAST_IF, (const char*) &sockAddr, sizeof(sockAddr));
-    struct ip_mreq mreq;
+    setsockopt(_socket, IPPROTO_IP, IP_MULTICAST_IF, (const char*) &sockAddr, sizeof(sockAddr));
     mreq.imr_interface.s_addr = htonl(INADDR_ANY);
     mreq.imr_multiaddr.s_addr = _multicastAddr.addr; 
     setsockopt (_socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (const char*) &mreq, sizeof(mreq));
@@ -105,25 +120,13 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     // Using INADDR_ANY causes us to join the multicast group, but only
     // on the default NIC.  When multiple NICs are present, we need to join
     // each manually.  Loop through all available addresses...
-    char ac[80];
-    if (gethostname(ac, sizeof(ac)) == 0) 
+    std::list<in_addr>::iterator iter;
+    for (iter = _interfaces.begin(); iter != _interfaces.end(); ++iter)
     {
-        struct hostent *phe = gethostbyname(ac);
-        if (phe != 0) 
-        {
-            for (int i = 0; phe->h_addr_list[i] != 0; ++i) 
-            {
-                mreq.imr_interface = *(in_addr*)phe->h_addr_list[i];
-                setsockopt (_socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, 
-                    (const char*) &mreq, sizeof(mreq));
-            }
-        }
+        mreq.imr_interface = *iter;
+        setsockopt (_socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, 
+            (const char*) &mreq, sizeof(mreq));
     }
-
-    // Increase the size of the send/receive buffers
-    int length = sizeof(buffer_size);
-    setsockopt(_socket, SOL_SOCKET, SO_RCVBUF, (char*)&buffer_size, length);
-    setsockopt(_socket, SOL_SOCKET, SO_SNDBUF, (char*)&buffer_size, length);
 
     return Ok;
 }
@@ -202,19 +205,9 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
             
             // Lastly, send the message.  
             int val =sendto(_socket, payload.getArchive(), payload.getArchiveLength(),
-                       0, (struct sockaddr*) &dest, sizeof(dest));// < 0 )
-            if (val < 0)
-            {
-                printf("Unable to send message to %s:%d (return=%ld)\n",val,
-                       inet_ntoa( *(struct in_addr*) &dest.sin_addr.s_addr ),
-                       htons(dest.sin_port));
-                printf("Sendto failed with last error=%d\n", getSocketError);
-                result = Failed;
-            }
-            else
-            {
-                result = Ok;
-            }   
+                       0, (struct sockaddr*) &dest, sizeof(dest));
+            if (val < 0) result = Failed;
+            else result = Ok;
         }
     }
 
@@ -423,17 +416,29 @@ Transport::TransportError JUDPTransport::broadcastMsg(Message& msg)
     dest.sin_family = AF_INET;
     dest.sin_addr.s_addr = _multicastAddr.addr;
     dest.sin_port = htons(_multicastAddr.port);
-    
-    // Lastly, send the message.
-    if (sendto(_socket, payload.getArchive(), payload.getArchiveLength(),
-               0, (struct sockaddr*) &dest, sizeof(dest)) < 0 )
+
+    // If the local node has more than one interface, broadcast over each
+    if (_interfaces.empty())
     {
-        printf("Sendto (multicast) failed with getlasterror=%d\n", getSocketError);
-        return Failed;
+        if (sendto(_socket, payload.getArchive(), payload.getArchiveLength(),
+                   0, (struct sockaddr*) &dest, sizeof(dest)) < 0 )
+            return Failed;
     }
-    
-    // debug
-    //std::cout << "Dumping archive..." << std::endl;
-    //payload.printArchive();
+    else
+    {
+        std::list<in_addr>::iterator iter;
+        for (iter = _interfaces.begin(); iter != _interfaces.end(); ++iter)
+        {
+            struct in_addr sockAddr;
+            sockAddr = *iter;
+            setsockopt (_socket, IPPROTO_IP, IP_MULTICAST_IF, 
+                (const char*) &sockAddr, sizeof(sockAddr));
+
+            // Lastly, send the message.
+            sendto(_socket, payload.getArchive(), payload.getArchiveLength(),
+                       0, (struct sockaddr*) &dest, sizeof(dest));
+        }
+    }
+
     return Transport::Ok;
 }
