@@ -69,7 +69,16 @@ public:
         // strip the const qualifier
         Archive& temp = const_cast<Archive&>(in);
         setData( temp.getArchive(), temp.getArchiveLength() );
-    } 
+    }
+
+    template<typename T> T swapBytes(T value)
+    {
+        if ((sizeof(T)!=2) && (sizeof(T)!=4)) return value;
+        char temp[sizeof(T)];
+        for (int i=0; i < sizeof(T); i++)
+            temp[i] = ((char*)(&value))[sizeof(T)-1-i];
+        return *((T*) temp);
+    }
 
     // templated operator to append data on the archive
     template<typename T> void operator<<(T value)
@@ -80,40 +89,27 @@ public:
         // Switch to network byte ordering if the length of the value
         // is more than a single byte.  This implementation
         // assumes an Intel byte ordering (host is little endian).
-        if ((pack_mode == BigEndian) && (sizeof(T) == 2))
+        bool isBigHost = (htons(256) == 256);
+        if (( isBigHost && (pack_mode == LittleEndian)) ||
+            (!isBigHost && (pack_mode == BigEndian)))
         {
-            *((T*)(data+data_length)) = htons(value);
+            *((T*)(data+data_length)) = swapBytes(value);
         }
-        else if ((pack_mode == BigEndian) && (sizeof(T) == 4))
-        {
-            *((T*)(data+data_length)) = htonl(value);
-        }
-        else
-        {      
+        else 
             *((T*)(data+data_length)) = value;
-        }
-        
-        data_length += sizeof(value);
+        data_length += sizeof(T);
     }
-
 
     // templated operator to pull data from the archive
     template<typename T> void operator>>(T& value)
     {
-        value = *((T*)(data+offset));
-
-        // Switch host byte ordering if the mode is BIG_ENDIAN.
-        if ((pack_mode == BigEndian) && (sizeof(T) == 2))
-        {
-            value = ntohs( value );
-        }
-        else if ((pack_mode == BigEndian) && (sizeof(T) == 4))
-        {
-            value = ntohl( value );
-        }
- 
-        // Update the offset so the next call pulls new data.
+        value = *((T*) (data+offset));
+        bool isBigHost = (htons(256) == 256);
+        if (( isBigHost && (pack_mode == LittleEndian)) ||
+            (!isBigHost && (pack_mode == BigEndian)))
+            value = swapBytes(value);
         offset += sizeof(T);
+        return;
     }
 
     // Handle strings

@@ -417,13 +417,14 @@ Transport::TransportError JUDPTransport::broadcastMsg(Message& msg)
     dest.sin_addr.s_addr = _multicastAddr.addr;
     dest.sin_port = htons(_multicastAddr.port);
 
-    // If the local node has more than one interface, broadcast over each
-    if (_interfaces.empty())
+    // If the local node only has 1 ethernet inteface, send on the default.
+    if (_interfaces.size() < 2)
     {
         if (sendto(_socket, payload.getArchive(), payload.getArchiveLength(),
                    0, (struct sockaddr*) &dest, sizeof(dest)) < 0 )
             return Failed;
     }
+    // Otherwise, send on all available interfaces
     else
     {
         std::list<in_addr>::iterator iter;
