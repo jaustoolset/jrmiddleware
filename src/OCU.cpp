@@ -85,9 +85,9 @@ int main(int argc, char* argv[])
         if (dest != 0)
         {
             // Send a message of the given size, with a counter and size element
-            *((int*)buffer) = ++counter;
-            *((unsigned short*) &buffer[4]) = datasize;
-            *((unsigned short*) &buffer[6]) = msg_id;
+            *((int*)buffer) = htonl(++counter);
+            *((unsigned short*) &buffer[4]) = htons(datasize);
+            *((unsigned short*) &buffer[6]) = htons(msg_id);
 
             //if ((counter % 500) == 0)
                 printf("Sending message %ld (id=%ld, size=%ld)\n", counter, msg_id, datasize);
@@ -104,9 +104,9 @@ int main(int argc, char* argv[])
             if (ret == Ok)
             {
                 // Pull off the data that was embedded in teh message.
-                int msgcount = *((int*) buffer);
-                unsigned short size = *((unsigned short*) &buffer[4]);
-                unsigned short id = *((unsigned short*) &buffer[6]);
+                int msgcount = ntohl(*((int*) buffer));
+                unsigned short size = ntohs(*((unsigned short*) &buffer[4]));
+                unsigned short id = ntohs(*((unsigned short*) &buffer[6]));
                 if (size != buffersize) printf("WARNING: SIZE INCONSISTENT (msg=%ld, buffer=%ld)\n", size, buffersize);
                 if (id != msg_id) printf("WARNING: ID INCONSISTENT (msg=%ld, buffer=%ld)\n", msg_id, id);
                 if ((prevMsg+1) != msgcount) printf("WARNING: Messages not in sequence (prev=%ld, this=%ld)\n", prevMsg, msgcount);
