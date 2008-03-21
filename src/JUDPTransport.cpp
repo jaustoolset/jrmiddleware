@@ -67,7 +67,7 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     config.parseFile(filename);
     unsigned short port = 3794;
     config.getValue("UDP_Port", port);
-    unsigned short multicast_TTL = 1;
+    unsigned char multicast_TTL = 1;
     config.getValue("MulticastTTL", multicast_TTL);
     std::string multicast_addr = "224.1.0.1";
     config.getValue("MulticastAddr", multicast_addr);
