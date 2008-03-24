@@ -10,7 +10,9 @@
  ************************************************************************
  */
 #include "JrSockets.h"
-#include "JuniorAPI.h"
+#include "JuniorAPI_v1.h"
+#include "JuniorAPI_v2.h"
+#include "JuniorAPI.hpp"
 #include "Message.h"
 #include "OS.h"
 #include <stdio.h>

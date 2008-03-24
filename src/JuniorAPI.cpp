@@ -9,13 +9,14 @@
  * @attention All rights reserved
  ************************************************************************
  */
-#include "JuniorAPI.h"
+#include "JuniorAPI_v1.h"
+#include "JuniorAPI_v2.h"
 #include "JuniorAPI.hpp"
 #include "JuniorMgr.h"
 
 using namespace DeVivo::Junior;
 
-JrErrorCode sendto(int handle,
+JrErrorCode JrSend(int handle,
            unsigned long destination, 
            unsigned short msg_id,
            unsigned int bufsize, 
@@ -29,34 +30,34 @@ JrErrorCode sendto(int handle,
 }
 
 // Functional interface
-JrErrorCode sendto(int handle,
+JrErrorCode JrSend(int handle,
            unsigned long destination, 
            unsigned int bufsize, 
            const char* buffer,
            int priority,
            int flags)
 {
-    return sendto(handle, destination, 0, bufsize, buffer, priority, flags);
+    return JrSend(handle, destination, 0, bufsize, buffer, priority, flags);
 }
 
-JrErrorCode broadcast(int handle,
+JrErrorCode JrBroadcast(int handle,
               unsigned int bufsize,
               const char* buffer,
               int priority)
 {
-    return sendto(handle, 0xFFFFFFFF, 0, bufsize, buffer, priority, 0);
+    return JrSend(handle, 0xFFFFFFFF, 0, bufsize, buffer, priority, 0);
 }
 
-JrErrorCode broadcast(int handle,
+JrErrorCode JrBroadcast(int handle,
               unsigned short msg_id,
               unsigned int bufsize,
               const char* buffer,
               int priority)
 {
-    return sendto(handle, 0xFFFFFFFF, msg_id, bufsize, buffer, priority, 0);
+    return JrSend(handle, 0xFFFFFFFF, msg_id, bufsize, buffer, priority, 0);
 }
 
-JrErrorCode recvfrom(int handle,
+JrErrorCode JrReceive(int handle,
              unsigned long* sender,
              unsigned short* msg_id,
              unsigned int* bufsize,
@@ -68,23 +69,25 @@ JrErrorCode recvfrom(int handle,
     return (mgr->recvfrom(sender, bufsize, buffer, priority, msg_id));
 }
 
-JrErrorCode recvfrom(int handle,
+JrErrorCode JrReceive(int handle,
              unsigned long* sender,
              unsigned int* bufsize,
              char* buffer,
              int* priority)
 {
-    return recvfrom(handle, sender, NULL, bufsize, buffer, priority);
+    return JrReceive(handle, sender, NULL, bufsize, buffer, priority);
 }
 
-JrErrorCode connect(unsigned long id, char* config_file, int* handle)
+JrErrorCode JrConnect(unsigned long id, char* config_file, int* handle)
 {
     if (handle == NULL) return InitFailed;
 
     // Create and initialize Junior Manager, to manage this 
     // connection to the RTE.  
     JuniorMgr* mgr = new JuniorMgr();
-    JrErrorCode ret = mgr->connect(id, config_file);
+    JrErrorCode ret;
+    if (config_file) ret = mgr->connect(id, config_file);
+    else ret = mgr->connect(id, "");
     if (ret != Ok)
     {
         delete mgr;
@@ -95,7 +98,7 @@ JrErrorCode connect(unsigned long id, char* config_file, int* handle)
     return ret;
 }
 
-JrErrorCode disconnect(int handle)
+JrErrorCode JrDisconnect(int handle)
 {    
     if (handle == 0) return NotInitialized;
     JuniorMgr* mgr = (JuniorMgr*) handle;
@@ -118,7 +121,7 @@ JuniorAPI::~JuniorAPI()
         delete mgr;
     }
 }
-JrErrorCode JuniorAPI::sendto( unsigned long destination, 
+JrErrorCode JuniorAPI::JrSend( unsigned long destination, 
                                unsigned int size, 
                                const char* buffer,
                                int priority,
@@ -130,7 +133,7 @@ JrErrorCode JuniorAPI::sendto( unsigned long destination,
     return (mgr->sendto(destination, size, buffer, priority, flags, msg_id));
 }
  
-JrErrorCode JuniorAPI::recvfrom( unsigned long* source,
+JrErrorCode JuniorAPI::JrReceive( unsigned long* source,
                                  unsigned int* bufsize,
                                  char* buffer,
                                  int* priority,
@@ -141,15 +144,15 @@ JrErrorCode JuniorAPI::recvfrom( unsigned long* source,
     return (mgr->recvfrom(source, bufsize, buffer, priority, msg_id));
 }
 
-JrErrorCode JuniorAPI::broadcast( unsigned int bufsize,
+JrErrorCode JuniorAPI::JrBroadcast( unsigned int bufsize,
                                   const char* buffer,
                                   int priority,
                                   unsigned short msg_id)
 {
-    return sendto(0xFFFFFFFF, bufsize, buffer, priority, 0, msg_id);
+    return JrSend(0xFFFFFFFF, bufsize, buffer, priority, 0, msg_id);
 }
 
-JrErrorCode JuniorAPI::connect( unsigned long id, 
+JrErrorCode JuniorAPI::JrConnect( unsigned long id, 
                                 char* config_file )
 {
     // Create and initialize Junior Manager, to manage this 
@@ -166,7 +169,7 @@ JrErrorCode JuniorAPI::connect( unsigned long id,
     return ret;
 }
 
-JrErrorCode JuniorAPI::disconnect( )
+JrErrorCode JuniorAPI::JrDisconnect( )
 {
     // Delete the manager instance, if we've got one.
     if (handle != 0)

@@ -8,6 +8,8 @@
 # * @attention All rights reserved
 # ************************************************************************
 
+
+
 import os
 baseEnv = Environment(ENV=os.environ)
 
@@ -17,23 +19,23 @@ baseEnv['LIBPATH'] = ['#lib']
 baseEnv['INSTALL_LIBDIR'] = '#lib'
 baseEnv['INSTALL_BINDIR'] = '#bin'
 
+# Some additional stuff to do for CYGWIN
+if baseEnv['PLATFORM'] == 'cygwin':
+    print "scons: Building for CYGWIN..."
+    baseEnv.Append( CCFLAGS = ['-D__CYGWIN__'] )
+
 # Some additional stuff to do if we're building for windows
 if os.name == "nt":                     
    print "scons: Building for Windows..."
-   baseEnv.Append( CCFLAGS = ['-DWINDOWS'] )
-   baseEnv.Append( CCFLAGS = ['-EHsc'] )
-   #baseEnv.Append( CPPPATH = ["c://Program Files//Microsoft Visual Studio 8//VC//include"] )
+   baseEnv.Append( CCFLAGS = ['-DWINDOWS', '-EHsc'] )
    baseEnv.Append( CPPPATH = [baseEnv['ENV']['SDKPATH']+"/Include"] )
    baseEnv.Append( LIBPATH = [baseEnv['ENV']['SDKPATH']+"/Lib"] )
+   baseEnv.Append( LINKFLAGS = ['/DEFAULTLIB:"WSock32.Lib"'] )
    baseEnv['INSTALL_BINDIR'] = '#winbin'
-
-
-else:
-   print "scons: Building for UNIX..."
-
 
 # Export the environment to children
 Export('baseEnv')
 
 # Build the source tree
 SConscript('src/SConscript', build_dir='src/obj')
+SConscript('test/SConscript', build_dir='test/obj')

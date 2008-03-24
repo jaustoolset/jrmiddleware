@@ -8,43 +8,55 @@
  #* @attention All rights reserved
  #************************************************************************
  
+# Import base environment
 import os
 Import( 'baseEnv' )
 
+# Here's where the good stuff starts...
 API_Files = [
     'JuniorAPI.cpp',
     'JrSockets.cpp',
     'JuniorMgr.cpp',
     'OS.cpp',
-    'ConfigData.cpp'
-]
-
-OCUFiles = [ 'OCU.cpp' ]
-
-RTE_Files =[
-    'JuniorRTE.cpp',
+    'ConfigData.cpp',
     'JUDPTransport.cpp'
 ]
 
-if os.name == "nt":  
-	libs =['WSock32.lib', 'Junior.lib']
+# Define multiple environments for building and using
+# the library as a Shared Library (dll or so).
+dllenv = baseEnv.Copy()
+dllenv.Append( CCFLAGS = ['-D__BUILD_DLL__'] ) 
+dllenv['SHOBJPREFIX'] = 'sh'
+ocuenv = baseEnv.Copy()
+ocuenv.Append( CCFLAGS = ['-D__USE_DLL__'] )                 
+
+# On Windows, we generate a DLL for the API
+# as well as a executable for the Run-Time Engine.
+# The RTE must be linked to a static library, however,
+# so we need to build both a static and a shared library.
+# These are given different names to prevent confusion,
+# but only the DLL (and associated lib) are intended 
+# for release.
+if os.name == "nt":
+
+    apilib = dllenv.SharedLibrary( target = 'Junior',
+                                   source = API_Files )
+                                                                
+    rteapp = baseEnv.Program( target = 'JuniorRTE',
+							  source = ['JuniorRTE.cpp'] + API_Files )
+							  
+    baseEnv.Install( baseEnv['INSTALL_BINDIR'], 'Junior.dll' )							  
+						
 else:
-	libs = ['libJunior.a']
-	
 
-# Generate both the OCU and Robot test programs
-apilib = baseEnv.Library(  target = 'Junior',
-                           source = API_Files )
-
-ocuapp = baseEnv.Program( target = 'ocu',
-                          source = OCUFiles,
-                          LIBS = libs )
-rteapp = baseEnv.Program( target = 'JuniorRTE',
-                          source = RTE_Files,
-                          LIBS = libs )
+    apilib = baseEnv.Library(  target = 'Junior',
+                               source = API_Files )
+                           
+    rteapp = baseEnv.Program( target = 'JuniorRTE',
+							  source = 'JuniorRTE.cpp',
+							  LIBS = 'Junior' )
                            
 
 baseEnv.Install( baseEnv['INSTALL_LIBDIR'], apilib )
-baseEnv.Install( baseEnv['INSTALL_BINDIR'], ocuapp )
 baseEnv.Install( baseEnv['INSTALL_BINDIR'], rteapp )
 baseEnv.Install( baseEnv['INSTALL_BINDIR'], 'junior.cfg' )

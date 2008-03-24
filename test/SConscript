@@ -1,0 +1,33 @@
+ #***********************************************************************
+ #* @file      SConscript
+ #* @author    Dave Martin, DeVivo AST, Inc.  
+ #* @date      2008/03/03
+ #*
+ #* @attention Copyright (C) 2008
+ #* @attention DeVivo AST, Inc.
+ #* @attention All rights reserved
+ #************************************************************************
+ 
+# Import base environment
+import os
+Import( 'baseEnv' )
+
+# Define multiple environments for using the library
+# as either static or shared
+dllenv = baseEnv.Copy()
+dllenv.Append( CCFLAGS = ['-D__USE_DLL__'] ) 
+
+# On Windows, use a DLL for the API.
+if os.name == "nt":
+                                                                
+    testapp = dllenv.Program( target = 'jr_test',
+							 source = 'jr_test.cpp',
+							 LIBS = 'Junior' )
+
+else:
+                           
+    testapp = baseEnv.Program( target = 'jr_test',
+							  source = 'jr_test.cpp',
+							  LIBS = 'Junior' )
+	                                                    
+baseEnv.Install( baseEnv['INSTALL_BINDIR'], testapp )

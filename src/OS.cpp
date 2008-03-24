@@ -13,6 +13,7 @@
 
 using namespace DeVivo::Junior;
 
+
 void DeVivo::Junior::JrSleep(unsigned long milliseconds)
 {
 #ifdef WINDOWS
@@ -21,6 +22,7 @@ void DeVivo::Junior::JrSleep(unsigned long milliseconds)
     usleep(milliseconds * 1000);
 #endif
 }
+
 
 void DeVivo::Junior::JrSpawnProcess(std::string path, std::string arg)
 {
@@ -72,5 +74,51 @@ unsigned long DeVivo::Junior::JrGetTimestamp()
     return (unsigned long)(time(NULL));
 #endif
 }
+
+// Return a list of IP addresses with all the NIC associate with this host
+std::list<unsigned long> DeVivo::Junior::JrGetIPAddresses()
+{
+    std::list<unsigned long> addresses;
+
+#if defined(WINDOWS) || defined(__CYGWIN__)
+
+    // Windows doesn't support ioctl calls, and the gethostbyname is a 
+    // better method anyway....
+    char ac[80];
+    if (gethostname(ac, sizeof(ac)) == 0)
+    {
+        struct hostent *phe = gethostbyname(ac);
+        if (phe != 0) 
+            for (int i = 0; phe->h_addr_list[i] != 0; ++i) 
+                addresses.push_back(((in_addr*)phe->h_addr_list[i])->s_addr);
+    }
+
+#else
+
+    // On Linux, we can use getifaddrs supported by BSD libraries.
+    struct ifaddrs* ifap, next;
+    if (getifaddrs(&ifap) != 0) return addresses;
+    if (ifap == NULL) return addresses;
+
+    // Loop through each interface, adding the address to the list
+    next = ifap;
+    do
+    {
+        if ( (ifap->ifa_addr->sa_family == AF_INET)  &&
+             ((((sockaddr_in*) ifap->ifa_addr)->sin_addr.s_addr) !=
+                        inet_addr("127.0.0.1")))
+            addresses.push_back(((sockaddr_in*) ifap->ifa_addr)->sin_addr.s_addr);
+        next = next->ifa_next;
+    } while (next != NULL);
+
+    // We need to free the memory allocated by getifaddrs
+    freeifaddrs(ifap);
+
+#endif
+
+   return addresses;
+}
+
+
 
 

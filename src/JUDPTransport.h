@@ -56,11 +56,11 @@ public:
 
 protected:
 
-    AddressMap<IP_ADDRESS>  _map;
-    int                     _socket;
-    HeaderCompressionTable  _inTable, _outTable;
-    IP_ADDRESS              _multicastAddr;
-    std::list<in_addr>      _interfaces;
+    AddressMap<IP_ADDRESS>   _map;
+    int                      _socket;
+    HeaderCompressionTable   _inTable, _outTable;
+    IP_ADDRESS               _multicastAddr;
+    std::list<unsigned long> _interfaces;
 
     // Internal function to help with packing the transport header
     void packHdr( JUDPArchive& packed_msg );

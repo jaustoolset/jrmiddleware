@@ -13,6 +13,7 @@
 #define __ABSSTRACT_OS_H
 
 #include <string>
+#include <list>
 #ifdef WINDOWS
     #include "Winsock.h"
     typedef int socklen_t;
@@ -22,6 +23,9 @@
     #include <netdb.h>
     #include <sys/un.h>
     #include <arpa/inet.h>
+#ifndef __CYGWIN__
+    #include <ifaddrs.h>
+#endif
 #endif
 
 namespace DeVivo {
@@ -30,6 +34,7 @@ namespace Junior {
 void JrSleep(unsigned long milliseconds);
 void JrSpawnProcess(std::string path, std::string arg);
 unsigned long JrGetTimestamp();
+std::list<unsigned long> JrGetIPAddresses();
 
 }} // namespace DeVivo::Junior
 #endif

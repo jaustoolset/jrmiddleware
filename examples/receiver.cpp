@@ -9,8 +9,7 @@
  * @attention All rights reserved
  ************************************************************************
  */
-#define JR_SEND_MESSAGE_ID
-#include "JuniorAPI.h"
+#include "JuniorAPI_v1.h"
 #include <list>
 #include <string>
 
@@ -41,7 +40,7 @@ int main(int argc, char* argv[])
     // Initiate a connection to the Junior Run-Time Engine.
     // We need to use the returned handle in all subsequent calls.
     int handle;
-    if (connect(myid, "junior.cfg", &handle) != Ok)
+    if (JrConnect(myid, NULL, &handle) != Ok)
     {
         printf("Init failed.  Terminating execution\n");
         return -1;
@@ -51,14 +50,14 @@ int main(int argc, char* argv[])
     while(1)
     {
         buffersize = MaxMsgSize;
-        ret = recvfrom(handle, &sender, &msg_id, &buffersize, buffer, 0);
+        ret = JrReceive(handle, &sender, &msg_id, &buffersize, buffer, 0);
         if (ret == Ok)
         {
             // Handle different message types differently.
             if (msg_id == QueryId)
             {
                 // Respond with a ReportId
-                sendto(handle, sender, ReportId, 0, buffer, 6, 0);
+                JrSend(handle, sender, ReportId, 0, buffer, 6, 0);
             }
             else if (msg_id == MsgString)
             {

@@ -17,14 +17,12 @@ OBJ2 = $(addsuffix .o, $(basename $(SRC2)))
 all: sender receiver
 sender: $(OBJ1)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJ1) -lm $(LIB)
-	mv sender.exe ../bin/.
+	mv sender ../bin/.
 receiver: $(OBJ2)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJ2) -lm $(LIB)
-	mv receiver.exe ../bin/.
+	mv receiver ../bin/.
 
 #-----Other stuff----------------------------
 clean:
 	rm -f $(OBJ1)
 	rm -f $(OBJ2)
-	rm -f ../bin/sender.exe
-	rm -f ../bin/receiver.exe

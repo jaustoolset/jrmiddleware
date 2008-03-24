@@ -15,12 +15,14 @@ using namespace DeVivo::Junior;
 
 ConfigData::ConfigError ConfigData::parseFile( std::string filename )
 {
+    if (filename.empty()) return InvalidFile;
+
     // Open the file for reading
     ifstream instream;
     instream.open( filename.c_str() );
     if (instream.fail())
     {
-        printf("Cannot open file: %s\n", filename.c_str());
+        printf("Cannot open configuration file: %s\n", filename.c_str());
         return InvalidFile;
     }
 

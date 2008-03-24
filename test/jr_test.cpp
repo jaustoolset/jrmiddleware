@@ -1,6 +1,6 @@
 /*! 
  ***********************************************************************
- * @file      OCU.cpp
+ * @file      jr_test.cpp
  * @author    Dave Martin, DeVivo AST, Inc.  
  * @date      2008/03/03
  *
@@ -9,8 +9,7 @@
  * @attention All rights reserved
  ************************************************************************
  */
-#define JR_SEND_MESSAGE_ID
-#include "JuniorAPI.h"
+#include "JuniorAPI_v1.h"
 #include <stdio.h>
 #include <string>
 #include <sstream>
@@ -28,16 +27,28 @@ static void handle_exit_signal( int signum )
     exit_flag = 1;
 }
 
+// Define a sleep function 
+#ifndef WINDOWS
+void Sleep(unsigned long milliseconds)
+{
+    usleep(milliseconds * 1000);
+}
+#endif
+
+
 int main(int argc, char* argv[])
 {
-    // If no arguments are specified, we can randomly select an ID and don't
-    // specified a destination.
-    unsigned long myid = JrGetTimestamp();
-    if (argc > 1) 
+    // Make sure an id is specified
+    if (argc < 2)
     {
-        std::stringstream s; s << argv[1];
-        s >> myid;
+        printf("usage: ocu <my id> <dest id: optional>\n");
+        return 1;
     }
+
+    // Get the local id from the command line
+    unsigned long myid;
+    std::stringstream s; s << argv[1];
+    s >> myid;
 
     // Get the command line argument for sending a message
     unsigned long dest = 0;
@@ -49,7 +60,7 @@ int main(int argc, char* argv[])
 
     // Connect to the Run-Time Engine
     int handle;
-    if (connect(myid, "junior.cfg", &handle) != Ok)
+    if (JrConnect(myid, "junior.cfg", &handle) != Ok)
     {
         printf("Init failed.  Terminating execution\n");
         return -1;
@@ -64,11 +75,11 @@ int main(int argc, char* argv[])
     char buffer[MaxBufferSize];
     int counter = 0;         
     unsigned long sender;
-    unsigned short datasize;
+    unsigned int datasize;
     int prevMsg  =0;
 
     // Randomize
-    srand(JrGetTimestamp());
+    srand(rand());
 
     // Do stuff
     while(!exit_flag)
@@ -76,8 +87,8 @@ int main(int argc, char* argv[])
         // Create a random message size.
         do
         {
-            datasize = (unsigned short) rand();
-        } while ((datasize > MaxBufferSize) || (datasize < 8));
+            datasize = (unsigned int) rand();
+        } while ((datasize > MaxBufferSize) || (datasize < 10));
 
         // Assign it a random message id
         unsigned short msg_id = (unsigned short) rand();
@@ -86,12 +97,12 @@ int main(int argc, char* argv[])
         {
             // Send a message of the given size, with a counter and size element
             *((int*)buffer) = htonl(++counter);
-            *((unsigned short*) &buffer[4]) = htons(datasize);
-            *((unsigned short*) &buffer[6]) = htons(msg_id);
+            *((unsigned int*) &buffer[4]) = htonl(datasize);
+            *((unsigned short*) &buffer[8]) = htons(msg_id);
 
             //if ((counter % 500) == 0)
                 printf("Sending message %ld (id=%ld, size=%ld)\n", counter, msg_id, datasize);
-            JrErrorCode result = sendto(handle, dest, msg_id, datasize, buffer, 6, 0);
+            JrErrorCode result = JrSend(handle, dest, msg_id, datasize, buffer, 6, 0);
             if ( result != Ok)
                 printf("Sendto failed (%d)\n", result);
         }
@@ -100,13 +111,13 @@ int main(int argc, char* argv[])
         for (int i=0; i<500; i++)
         {
             unsigned int buffersize = MaxBufferSize; msg_id = 0;
-            JrErrorCode ret = recvfrom(handle, &sender, &msg_id, &buffersize, buffer, NULL);
+            JrErrorCode ret = JrReceive(handle, &sender, &msg_id, &buffersize, buffer, NULL);
             if (ret == Ok)
             {
                 // Pull off the data that was embedded in teh message.
                 int msgcount = ntohl(*((int*) buffer));
-                unsigned short size = ntohs(*((unsigned short*) &buffer[4]));
-                unsigned short id = ntohs(*((unsigned short*) &buffer[6]));
+                unsigned int size = ntohl(*((unsigned int*) &buffer[4]));
+                unsigned short id = ntohs(*((unsigned short*) &buffer[8]));
                 if (size != buffersize) printf("WARNING: SIZE INCONSISTENT (msg=%ld, buffer=%ld)\n", size, buffersize);
                 if (id != msg_id) printf("WARNING: ID INCONSISTENT (msg=%ld, buffer=%ld)\n", msg_id, id);
                 if ((prevMsg+1) != msgcount) printf("WARNING: Messages not in sequence (prev=%ld, this=%ld)\n", prevMsg, msgcount);
@@ -115,12 +126,12 @@ int main(int argc, char* argv[])
                 prevMsg = msgcount;
             }               
 
-            JrSleep(1);
+            Sleep(1);
         }
     }
 
     // clean-up
-    disconnect(handle);
+    JrDisconnect(handle);
 }
 
   

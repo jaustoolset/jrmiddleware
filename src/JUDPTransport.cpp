@@ -51,16 +51,6 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     WSAStartup(0x22, &temp);
 #endif
 
-    // Get a list of all network interfaces on this node
-    char ac[80];
-    if (gethostname(ac, sizeof(ac)) == 0) 
-    {
-        struct hostent *phe = gethostbyname(ac);
-        if (phe != 0) 
-            for (int i = 0; phe->h_addr_list[i] != 0; ++i) 
-                _interfaces.push_back( *(in_addr*)phe->h_addr_list[i] );
-    }
-
     // Read the configuration file, and set-up defaults for anything
     // that isn't specified.
     ConfigData config;
@@ -120,10 +110,12 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     // Using INADDR_ANY causes us to join the multicast group, but only
     // on the default NIC.  When multiple NICs are present, we need to join
     // each manually.  Loop through all available addresses...
-    std::list<in_addr>::iterator iter;
-    for (iter = _interfaces.begin(); iter != _interfaces.end(); ++iter)
+    // Get a list of IP addresses associated with this host.
+    _interfaces = JrGetIPAddresses();
+    std::list<unsigned long>::iterator addy;
+    for (addy = _interfaces.begin(); addy != _interfaces.end(); ++addy)
     {
-        mreq.imr_interface = *iter;
+        mreq.imr_interface.s_addr = *addy;
         setsockopt (_socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, 
             (const char*) &mreq, sizeof(mreq));
     }
@@ -427,11 +419,11 @@ Transport::TransportError JUDPTransport::broadcastMsg(Message& msg)
     // Otherwise, send on all available interfaces
     else
     {
-        std::list<in_addr>::iterator iter;
+        std::list<unsigned long>::iterator iter;
         for (iter = _interfaces.begin(); iter != _interfaces.end(); ++iter)
         {
             struct in_addr sockAddr;
-            sockAddr = *iter;
+            sockAddr.s_addr = *iter;
             setsockopt (_socket, IPPROTO_IP, IP_MULTICAST_IF, 
                 (const char*) &sockAddr, sizeof(sockAddr));
 

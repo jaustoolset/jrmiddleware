@@ -12,8 +12,19 @@
 #ifndef __JUNIOR_API_HPP
 #define __JUNIOR_API_HPP
 
+// Manage the defines for building (or using) the
+// Junior Toolset as a DLL.
+#if defined(__BUILD_DLL__)
+#define DLL_MACRO __declspec(dllexport)
+#elif defined(__USE_DLL__)
+#define DLL_MACRO __declspec(dllimport)
+#else
+#define DLL_MACRO 
+#endif
+
 // Convenient typedefs, enumerations and constants
-#ifndef __JUNIOR_API_H
+#ifndef __JUNIOR_TYPEDEFS
+#define __JUNIOR_TYPEDEFS
 typedef enum {Ok, NoMessages, InvalidID, Overflow, InitFailed, 
               AddrUnknown, Timeout, UnknownError, NotInitialized} JrErrorCode;
 const unsigned char GuarenteeDelivery = 0x01;
@@ -25,35 +36,35 @@ const int JrMaxPriority = 15;
 // Optional arguments allow JR to route a two byte message identifier 
 // along with the message.  The receiving end to identify the message type.  
 // Otherwise, the application must handle any message identification mechanism.
-class JuniorAPI
+class DLL_MACRO JuniorAPI
 {
 public:
 
     JuniorAPI();
     ~JuniorAPI();
 
-    JrErrorCode sendto( unsigned long destination, 
+    JrErrorCode JrSend( unsigned long destination, 
                         unsigned int size, 
                         const char* buffer,
                         int priority,
                         int flags,
                         unsigned short msg_id = 0);
 
-    JrErrorCode recvfrom( unsigned long* source,
+    JrErrorCode JrReceive( unsigned long* source,
                           unsigned int* bufsize,
                           char* buffer,
                           int* priority,
                           unsigned short* msg_id = 0);
 
-    JrErrorCode broadcast( unsigned int bufsize,
+    JrErrorCode JrBroadcast( unsigned int bufsize,
                            const char* buffer,
                            int priority,
                            unsigned short msg_id = 0);
 
-    JrErrorCode connect( unsigned long id, 
+    JrErrorCode JrConnect( unsigned long id, 
                          char* config_file );
 
-    JrErrorCode disconnect( );
+    JrErrorCode JrDisconnect( );
 
 private:
     int handle;

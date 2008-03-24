@@ -9,8 +9,7 @@
  * @attention All rights reserved
  ************************************************************************
  */
-#define JR_SEND_MESSAGE_ID
-#include "JuniorAPI.h"
+#include "JuniorAPI_v1.h"
 #include <list>
 #include <algorithm>
 
@@ -40,7 +39,7 @@ int main(int argc, char* argv[])
     // Initiate a connection to the Junior Run-Time Engine.
     // We need to use the returned handle in all subsequent calls.
     int handle;
-    if (connect(myid, "junior.cfg", &handle) != Ok)
+    if (JrConnect(myid, NULL, &handle) != Ok)
     {
         printf("Init failed.  Terminating execution\n");
         return -1;
@@ -59,7 +58,7 @@ int main(int argc, char* argv[])
         do
         {
             buffersize = MaxMsgSize;
-            ret = recvfrom(handle, &sender, &msg_id, &buffersize, buffer, NULL);
+            ret = JrReceive(handle, &sender, &msg_id, &buffersize, buffer, NULL);
             if ((ret == Ok)  && (msg_id == ReportId))
             {
                 // If this sender is not in our list of destinations, add it.
@@ -72,13 +71,13 @@ int main(int argc, char* argv[])
         } while (ret == Ok);
 
         // Broadcast a query for ids
-        broadcast(handle, QueryId, 0, buffer, 6);
+        JrBroadcast(handle, QueryId, 0, buffer, 6);
 
         // Send a message to each known destination
         for (iter = destinations.begin(); iter != destinations.end(); iter++)
         {
             sprintf(buffer, "Message sent from %ld\0", myid);
-            sendto(handle, *iter, MsgString, strlen(buffer), buffer, 6, 0);
+            JrSend(handle, *iter, MsgString, strlen(buffer), buffer, 6, 0);
         }
 
     // Sleep a bit before looping again
