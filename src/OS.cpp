@@ -96,7 +96,7 @@ std::list<unsigned long> DeVivo::Junior::JrGetIPAddresses()
 #else
 
     // On Linux, we can use getifaddrs supported by BSD libraries.
-    struct ifaddrs* ifap, next;
+    struct ifaddrs *ifap, *next;
     if (getifaddrs(&ifap) != 0) return addresses;
     if (ifap == NULL) return addresses;
 
@@ -104,10 +104,10 @@ std::list<unsigned long> DeVivo::Junior::JrGetIPAddresses()
     next = ifap;
     do
     {
-        if ( (ifap->ifa_addr->sa_family == AF_INET)  &&
-             ((((sockaddr_in*) ifap->ifa_addr)->sin_addr.s_addr) !=
+        if ( (next->ifa_addr->sa_family == AF_INET)  &&
+             ((((sockaddr_in*) next->ifa_addr)->sin_addr.s_addr) !=
                         inet_addr("127.0.0.1")))
-            addresses.push_back(((sockaddr_in*) ifap->ifa_addr)->sin_addr.s_addr);
+            addresses.push_back(((sockaddr_in*) next->ifa_addr)->sin_addr.s_addr);
         next = next->ifa_next;
     } while (next != NULL);
 
