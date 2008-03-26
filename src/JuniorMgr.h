@@ -25,6 +25,7 @@ typedef std::pair<JAUS_ID, unsigned short> MsgId;
 typedef std::pair<unsigned long, MsgId> TimeStampedMsgId;
 typedef std::list<TimeStampedMsgId> MsgIdList;
 typedef std::list<TimeStampedMsgId>::iterator MsgIdListIter;
+const int JrMaxPriority = 15;
 
 class JuniorMgr
 {
@@ -38,7 +39,7 @@ public:
                 const char* buffer, int priority, int flags, MessageCode code = 0);
 
     JrErrorCode recvfrom( unsigned long* sender, unsigned int* bufsize,
-                  char* buffer, int* priority, MessageCode* code = NULL);
+                  char* buffer, int* priority, int* flags, MessageCode* code = NULL);
 
     JrErrorCode connect(unsigned long id, std::string config_file);
 

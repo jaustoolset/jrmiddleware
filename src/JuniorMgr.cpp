@@ -18,6 +18,7 @@ using namespace DeVivo::Junior;
 
 const unsigned int MaxMsgSize = 4079;
 
+
 JuniorMgr::JuniorMgr():
     _socket_ptr(NULL)
 {
@@ -225,6 +226,9 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
     // Check for degenerate case
     if (destination == 0) return InvalidID;
 
+    // Modify the priority to not exceed the 4 bit space
+    if (priority > JrMaxPriority) priority = JrMaxPriority;
+
     // If the destination identifier contains wildcard characters,
     // we need to route the message as a broadcast instead of a unicast.
     JAUS_ID destId(destination);
@@ -233,7 +237,7 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
         // This is a broadcast, so make sure we turn off ack/nak, 
         // and we meet the size limit (broadcasts cannot be parsed into
         // multiple packets.
-        flags = 0;
+        flags &= 0xFFFFFFFE;
         if (size > MaxMsgSize)
         {
             printf("Broadcast of buffers larger than 4079 bytes is not supported\n");
@@ -257,7 +261,9 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
         msg.setSourceId(_id);
         msg.setPriority(priority);
         msg.setMessageCode(code);
-        if (flags & 0x01) msg.setAckNakFlag(1);
+        if (flags & GuarenteeDelivery) msg.setAckNakFlag(1);
+        if (flags & ServiceConnection) msg.setServiceConnection(1);
+        if (flags & ExperimentalFlag) msg.setExperimental(1);
         msg.setSequenceNumber(_message_counter);
         _message_counter++;
 
@@ -282,7 +288,7 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
 
 
         // TO DO : Pend here for ACK-NAK
-        if (flags & 0x01)
+        if (flags & GuarenteeDelivery)
         {
             // We need to wait for an acknowledgement.  Note that we wait a maximum of
             // 150 milliseconds, and retransmit the original message every 50 milliseconds.
@@ -338,6 +344,7 @@ JrErrorCode JuniorMgr::recvfrom(unsigned long* sender,
                         unsigned int* bufsize,
                         char* buffer,
                         int* priority,
+                        int* flags,
                         MessageCode* code)
 {
     // Check the socket for incoming messages.  
@@ -372,6 +379,11 @@ JrErrorCode JuniorMgr::recvfrom(unsigned long* sender,
             if (sender != NULL) *sender = value->getSourceId().val;
             if (priority != NULL) *priority = value->getPriority();
             if (code != NULL) *code = value->getMessageCode();
+            if (flags != NULL)
+            {
+                if (value->getServiceConnection()) *flags |= ServiceConnection;
+                if (value->getExperimental()) *flags |= ExperimentalFlag;
+            }
             unsigned int data_size; char* data_ptr;
             value->getPayload(data_size, data_ptr);
 

@@ -34,7 +34,7 @@ class Message
 public:
     Message():
             _code(0),_source(0),_destination(0), _priority(6), 
-            _acknak(0), _control(0), _payload(){}
+            _acknak(0), _control(0),_service_connection(0), _experimental(0), _payload(){}
    ~Message(){}
 
     //
@@ -63,6 +63,18 @@ public:
     //
     void setAckNakFlag(char flag){_acknak=flag;}
     char getAckNakFlag(){return _acknak;}
+
+    //
+    // Functions for service connection
+    //
+    void setServiceConnection(char flag){_service_connection = flag;}
+    char getServiceConnection(){return _service_connection;}
+
+    //
+    // Functions for experimental bit
+    //
+    void setExperimental(char flag){_experimental = flag;}
+    char getExperimental(){return _experimental;}
 
     //
     // Functions for data control (large message handling)
@@ -106,6 +118,8 @@ protected:
     char           _control;
     unsigned short _sequence;
     Archive        _payload;
+    char           _service_connection;
+    char           _experimental;
 
     //
     // Internal function to (un-)pack a JAUS header with standard parameters
@@ -149,8 +163,9 @@ inline void Message::packHdr( Archive& packed_msg )
     // Pack header as little endian
     packed_msg.setPackMode( Archive::LittleEndian );
 
-    // Priority and acknowledgement
-    packed_msg << (char) (_priority | (_acknak << 4));
+    // Priority and acknowledgement, service connection, experimental
+    char options = _priority | (_acknak << 4) | (_service_connection << 6) | (_experimental << 7);
+    packed_msg << options;
 
     // Default version is 3.2 (value 2)
     packed_msg << (char) 2;
@@ -183,6 +198,8 @@ inline void Message::unpackHdr( Archive& packed_msg )
     packed_msg >> delivery_options; // message priority
     _priority = delivery_options & 0x0F;
     _acknak   = ((delivery_options & 0x30) >> 4);
+    _service_connection = ((delivery_options & 0x40) >> 6);
+    _experimental = ((delivery_options & 0x80) >> 7);
 
     // Read (and discard) fields we don't care about...
     char dummy;

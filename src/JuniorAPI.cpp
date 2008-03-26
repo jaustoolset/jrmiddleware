@@ -62,20 +62,22 @@ JrErrorCode JrReceive(int handle,
              unsigned short* msg_id,
              unsigned int* bufsize,
              char* buffer,
-             int* priority)
+             int* priority,
+             int* flags )
 {
     if (handle == 0) return NotInitialized;
     JuniorMgr* mgr = (JuniorMgr*) handle;
-    return (mgr->recvfrom(sender, bufsize, buffer, priority, msg_id));
+    return (mgr->recvfrom(sender, bufsize, buffer, priority, flags, msg_id));
 }
 
 JrErrorCode JrReceive(int handle,
              unsigned long* sender,
              unsigned int* bufsize,
              char* buffer,
-             int* priority)
+             int* priority,
+             int* flags )
 {
-    return JrReceive(handle, sender, NULL, bufsize, buffer, priority);
+    return JrReceive(handle, sender, NULL, bufsize, buffer, priority, flags);
 }
 
 JrErrorCode JrConnect(unsigned long id, char* config_file, int* handle)
@@ -137,11 +139,12 @@ JrErrorCode JuniorAPI::JrReceive( unsigned long* source,
                                  unsigned int* bufsize,
                                  char* buffer,
                                  int* priority,
+                                 int* flags,
                                  unsigned short* msg_id)
 {
     if (handle == 0) return NotInitialized;
     JuniorMgr* mgr = (JuniorMgr*) handle;
-    return (mgr->recvfrom(source, bufsize, buffer, priority, msg_id));
+    return (mgr->recvfrom(source, bufsize, buffer, priority, flags, msg_id));
 }
 
 JrErrorCode JuniorAPI::JrBroadcast( unsigned int bufsize,

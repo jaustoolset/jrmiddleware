@@ -22,13 +22,19 @@
 #define DLL_MACRO 
 #endif
 
-// Convenient typedefs, enumerations and constants
 #ifndef __JUNIOR_TYPEDEFS
 #define __JUNIOR_TYPEDEFS
+
+// Define an enumerated list of error codes used by the Junior API.
 typedef enum {Ok, NoMessages, InvalidID, Overflow, InitFailed, 
               AddrUnknown, Timeout, UnknownError, NotInitialized} JrErrorCode;
+
+// Define the list of valid flags.  These can be logically AND'ed into
+// the "flags" field to allow for more than one flag per message.
 const unsigned char GuarenteeDelivery = 0x01;
-const int JrMaxPriority = 15;
+const unsigned char ServiceConnection = 0x02;
+const unsigned char ExperimentalFlag  = 0x04;
+
 #endif
 
 // Functional interface.  
@@ -46,7 +52,8 @@ JrErrorCode DLL_MACRO JrReceive(int handle,
              unsigned long* source,
              unsigned int* bufsize,
              char* buffer,
-             int* priority);
+             int* priority,
+             int* flags );
 
 JrErrorCode DLL_MACRO JrBroadcast(int handle,
               unsigned int bufsize,
