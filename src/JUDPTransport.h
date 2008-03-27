@@ -13,6 +13,7 @@
 #define __JAUS_UDP_TRANSPORT_H
 
 #include "Transport.h"
+#include "TransportArchive.h"
 #include "HeaderCompression.h"
 #include "AddressMap.h"
 
@@ -61,13 +62,11 @@ protected:
     HeaderCompressionTable   _inTable, _outTable;
     IP_ADDRESS               _multicastAddr;
     std::list<unsigned long> _interfaces;
-
-    // Internal function to help with packing the transport header
-    void packHdr( JUDPArchive& packed_msg );
+    char                     _use_opc;
 
     // Internal functions to help with compression
-    bool uncompressHeader( JUDPArchive&, JAUS_ID, struct sockaddr_in& );
-    bool compressHeader  ( JUDPArchive&, JAUS_ID );
+    bool uncompressHeader( TransportArchive*, JAUS_ID, struct sockaddr_in& );
+    bool compressHeader  ( TransportArchive*, JAUS_ID );
 
 };
 }} // namespace DeVivo::Junior

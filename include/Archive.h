@@ -271,53 +271,6 @@ inline void Archive::removeAt( int index, int length )
     data_length -= length;
 }
 
-//
-// Define two specialty classes.  This is to ensure that we're always
-// talking about the right kind of Archive.
-//
-class JUDPArchive : public Archive
-{
-  public:
-    JUDPArchive(){}
-   ~JUDPArchive(){}
 
-    void getSourceId( JAUS_ID& id ) { getValueAt( 13, id ); }
-    void getDestinationId( JAUS_ID& id ) { getValueAt( 9, id ); }
-    void getVersion( unsigned char& version ) { getValueAt( 0, version ); }
-    void getMsgLength( unsigned short& length ) 
-    {
-        getValueAt(3, length); 
-        length = ntohs(length);
-    }
-    void setMsgLength( unsigned short length )
-    {
-        unsigned short temp = htons( length );
-       *((unsigned short*) &data[3]) = temp;
-    }
-    void getHCFlags( unsigned char& flags )
-    {
-        getValueAt( 2, flags);
-        flags &= 0xC0; // flags are the highest 2 bits
-        flags = flags >> 6;
-    }
-    void setHCFlags( unsigned char flags )
-    {
-        // Set the bits without clobbering length
-        data[2] = (data[2] & 0x3F) | (flags << 6);
-    }
-    void getHCLength( unsigned char& length )
-    {
-        getValueAt( 2, length );
-        length &= 0x3F; // length is the lower 6 bits 
-    }
-    void setHCLength( unsigned char length )
-    {
-        // Set length bits without clobbering flags
-        data[2] = (data[2] & 0xC0) | length;
-    }
-    void getHCNumber( unsigned char& num ) { getValueAt( 1, num ); }
-    void setHCNumber( unsigned char num )  { data[1] = num; }
-    char* getJausMsgPtr( ) { return &data[5]; }
-};
 }} // namespace DeVivo::Junior
 #endif

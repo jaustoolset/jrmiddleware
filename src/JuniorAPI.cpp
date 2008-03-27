@@ -80,7 +80,7 @@ JrErrorCode JrReceive(int handle,
     return JrReceive(handle, sender, NULL, bufsize, buffer, priority, flags);
 }
 
-JrErrorCode JrConnect(unsigned long id, char* config_file, int* handle)
+JrErrorCode JrConnect(unsigned long id, const char* config_file, int* handle)
 {
     if (handle == NULL) return InitFailed;
 
@@ -156,7 +156,7 @@ JrErrorCode JuniorAPI::JrBroadcast( unsigned int bufsize,
 }
 
 JrErrorCode JuniorAPI::JrConnect( unsigned long id, 
-                                char* config_file )
+                                  const char* config_file )
 {
     // Create and initialize Junior Manager, to manage this 
     // connection to the RTE.  

@@ -69,7 +69,7 @@ public:
                            unsigned short msg_id = 0);
 
     JrErrorCode JrConnect( unsigned long id, 
-                         char* config_file );
+                           const char* config_file );
 
     JrErrorCode JrDisconnect( );
 

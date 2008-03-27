@@ -35,6 +35,14 @@ void Sleep(unsigned long milliseconds)
 }
 #endif
 
+// Define the path name for the config file
+#ifdef WINDOWS
+#define CONFIG_PATH_NAME "c:/windows/system32/"
+#else
+#define CONFIG_PATH_NAME "/usr/bin/"
+#endif
+#undef CONFIG_PATH_NAME
+#define CONFIG_PATH_NAME ""
 
 int main(int argc, char* argv[])
 {
@@ -60,7 +68,9 @@ int main(int argc, char* argv[])
 
     // Connect to the Run-Time Engine
     int handle;
-    if (JrConnect(myid, "junior.cfg", &handle) != Ok)
+    std::string file_path = std::string(CONFIG_PATH_NAME) + 
+                            std::string("junior.cfg");
+    if (JrConnect(myid, file_path.c_str(), &handle) != Ok)
     {
         printf("Init failed.  Terminating execution\n");
         return -1;

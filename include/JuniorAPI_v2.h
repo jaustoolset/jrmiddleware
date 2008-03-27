@@ -61,8 +61,8 @@ JrErrorCode DLL_MACRO JrBroadcast(int handle,
               int priority);
 
 JrErrorCode DLL_MACRO JrConnect(unsigned long id, 
-                              char* config_file, 
-                              int* handle);
+                                const char* config_file, 
+                                int* handle);
 
 JrErrorCode DLL_MACRO JrDisconnect(int handle);
 
