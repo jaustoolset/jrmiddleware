@@ -18,7 +18,7 @@
 namespace DeVivo {
 namespace Junior {
 
-const unsigned short OPC_HeaderSize = sizeof("JAUS01.0");
+const unsigned short OPC_HeaderSize = 8; // length of "JAUS01.0"
 //
 // A Transport Archive is a specialty archive that includes
 // on-the-wire header bits (either JUDP or OPC).

@@ -214,7 +214,8 @@ Transport::TransportError JrSocket::broadcastMsg(Message& msg)
         // each socket that matches the destination (including wildcards).
         for (int i = 0; i < _map.getList().size(); i++)
         {
-            if (msg.getDestinationId() == _map.getList()[i].first)
+            if ((msg.getDestinationId() == _map.getList()[i].first) &&
+                (msg.getSourceId() != _map.getList()[i].first))
                 sendMsg(msg, _map.getList()[i].second);
         }
     }

@@ -86,6 +86,8 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     if (bind(_socket,(struct sockaddr*)&sockAddr,sizeof(sockAddr))<0)
     {
         //printf("Unable to bind to port %ld.  Returning failed.\n", port);
+        closesocket(_socket);
+        _socket = 0;
         return InitFailed;
     }
 
