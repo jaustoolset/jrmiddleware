@@ -20,7 +20,11 @@ namespace Junior {
 
 // Define a Message Code
 typedef unsigned short MessageCode;
+const unsigned short Connect = 1;
+const unsigned short Accept  = 2;
+const unsigned short Cancel  = 3;
 
+// Define lists composed of Messages
 class Message;
 typedef std::list<Message*> MessageList;
 typedef std::list<Message*>::iterator MessageListIter;
