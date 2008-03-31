@@ -287,4 +287,17 @@ Transport::TransportError JrSocket::setDestination(std::string destination)
     return Transport::Ok;
 }
 
+Transport::TransportError JrSocket::removeDestination(JAUS_ID id)
+{
+#ifdef WINDOWS
+    // For Windows, we need to close the mailslot associated
+    // with this destination
+    SocketId sockname;
+    if (_map.getAddrFromId(id, sockname) == false)
+        CloseHandle(sockname);
+#endif
 
+    // Remove this destination from the map
+    _map.removeAddress(id);
+    return Transport::Ok;
+}

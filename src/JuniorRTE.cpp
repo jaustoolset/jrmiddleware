@@ -109,15 +109,23 @@ int main(int argc, char* argv[])
             msglist.pop_front();
 
             // Process the message request
-            if (msg->getDestinationId().val == 0)
+            if ((msg->getDestinationId().val == 0) && 
+                (msg->getMessageCode() == Connect))
             {
-                // This message was intended for the RTE, and therefore must
-                // be a connection request.  Response appropriately.
+                // Connection request from client.
                 Message response;
                 response.setSourceId(0);
                 response.setDestinationId(msg->getSourceId());
+                response.setMessageCode(Accept);
                 publicSocket.sendMsg(response);
                 _clients.push_back(msg->getSourceId().val);
+            }
+            else if ((msg->getDestinationId().val == 0) && 
+                     (msg->getMessageCode() == Cancel))
+            {
+                // Disconnect client.
+                _clients.remove(msg->getSourceId().val);
+                publicSocket.removeDestination(msg->getSourceId());
             }
             else 
             {

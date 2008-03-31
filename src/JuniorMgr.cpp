@@ -31,7 +31,15 @@ JuniorMgr::JuniorMgr():
 
 JuniorMgr::~JuniorMgr()
 {
-    if (_socket_ptr) delete(_socket_ptr);
+    if (_socket_ptr)
+    {
+        Message cancel;
+        cancel.setMessageCode(Cancel);
+        cancel.setSourceId(_id);
+        cancel.setDestinationId(0);
+        _socket_ptr->sendMsg(cancel);
+        delete(_socket_ptr);
+    }
 }
 
 unsigned int JuniorMgr::umin(unsigned int x, unsigned int y)
@@ -449,6 +457,8 @@ JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
     // to look for private traffic on a socket with the Identifier name.
     Message msg;
     msg.setSourceId(id);
+    msg.setDestinationId(0);
+    msg.setMessageCode(Connect);
     mySocket->sendMsg(msg);
     printf("API: Sending connection request to RTE...\n");
 
