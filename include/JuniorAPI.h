@@ -9,8 +9,8 @@
  * @attention All rights reserved
  ************************************************************************
  */
-#ifndef __JUNIOR_API_V1_H
-#define __JUNIOR_API_V1_H
+#ifndef __JUNIOR_API_H
+#define __JUNIOR_API_H
 
 // Manage the defines for building (or using) the
 // Junior Toolset as a DLL.
@@ -22,8 +22,8 @@
 #define DLL_MACRO 
 #endif
 
-#ifndef __JUNIOR_TYPEDEFS
-#define __JUNIOR_TYPEDEFS
+// Extern the definitions to avoid name mangling
+extern "C" {
 
 // Define an enumerated list of error codes used by the Junior API.
 typedef enum {Ok, NoMessages, InvalidID, Overflow, InitFailed, 
@@ -34,8 +34,6 @@ typedef enum {Ok, NoMessages, InvalidID, Overflow, InitFailed,
 const unsigned char GuarenteeDelivery = 0x01;
 const unsigned char ServiceConnection = 0x02;
 const unsigned char ExperimentalFlag  = 0x04;
-
-#endif
 
 // Functional interface.  
 JrErrorCode DLL_MACRO JrSend(int handle,
@@ -66,4 +64,5 @@ JrErrorCode DLL_MACRO JrConnect(unsigned long id,
 
 JrErrorCode DLL_MACRO JrDisconnect(int handle);
 
+} // end extern "C"
 #endif

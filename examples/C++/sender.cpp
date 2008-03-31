@@ -9,7 +9,7 @@
  * @attention All rights reserved
  ************************************************************************
  */
-#include "JuniorAPI_v1.h"
+#include "JuniorAPI.h"
 #include <list>
 #include <algorithm>
 
@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
         do
         {
             buffersize = MaxMsgSize;
-            ret = JrReceive(handle, &sender, &msg_id, &buffersize, buffer, NULL);
+            ret = JrReceive(handle, &sender, &msg_id, &buffersize, buffer, NULL, NULL);
             if ((ret == Ok)  && (msg_id == ReportId))
             {
                 // If this sender is not in our list of destinations, add it.

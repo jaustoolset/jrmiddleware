@@ -1,6 +1,6 @@
 #-----Macros---------------------------------
-LIB = ../lib/libJunior.a
-INCLUDES = -I../include
+LIB = ../../lib/libJunior.a
+INCLUDES = -I../../include
 
 # set up compiler and options
 CXX = g++
@@ -17,10 +17,9 @@ OBJ2 = $(addsuffix .o, $(basename $(SRC2)))
 all: sender receiver
 sender: $(OBJ1)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJ1) -lm $(LIB)
-	mv sender ../bin/.
+	
 receiver: $(OBJ2)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJ2) -lm $(LIB)
-	mv receiver ../bin/.
 
 #-----Other stuff----------------------------
 clean:

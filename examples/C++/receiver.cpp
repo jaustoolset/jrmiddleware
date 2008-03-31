@@ -9,7 +9,7 @@
  * @attention All rights reserved
  ************************************************************************
  */
-#include "JuniorAPI_v1.h"
+#include "JuniorAPI.h"
 #include <list>
 #include <string>
 
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     while(1)
     {
         buffersize = MaxMsgSize;
-        ret = JrReceive(handle, &sender, &msg_id, &buffersize, buffer, 0);
+        ret = JrReceive(handle, &sender, &msg_id, &buffersize, buffer, NULL, NULL);
         if (ret == Ok)
         {
             // Handle different message types differently.
