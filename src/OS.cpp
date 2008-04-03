@@ -43,7 +43,7 @@ void DeVivo::Junior::JrSpawnProcess(std::string path, std::string arg)
         memset(&pi, 0, sizeof(PROCESS_INFORMATION));
         sprintf(cmd, "%s %s\0", path.c_str(), arg.c_str());
         BOOL result = CreateProcess(  NULL, LPSTR(cmd), NULL, NULL, FALSE, 
-            NORMAL_PRIORITY_CLASS | CREATE_NEW_PROCESS_GROUP, NULL,  NULL,  &si, &pi);
+            HIGH_PRIORITY_CLASS | CREATE_NEW_PROCESS_GROUP, NULL,  NULL,  &si, &pi);
         if(result == 0)  printf("Could not create process (%s)\n", path.c_str());
     }
 
@@ -65,13 +65,15 @@ void DeVivo::Junior::JrSpawnProcess(std::string path, std::string arg)
 #endif
 }
 
-// Return the current time (in seconds)
+// Return the current time (in milliseconds)
 unsigned long DeVivo::Junior::JrGetTimestamp()
 {
 #ifdef WINDOWS
-    return (unsigned long)(GetTickCount()/1000);
+    return (unsigned long)(GetTickCount());
 #else
-    return (unsigned long)(time(NULL));
+    struct timeval tv; struct timezone tz;
+    gettimeofday(&tv, &tz);
+    return (tv.tv_sec*1000 + (unsigned long)(tv.tv_usec/1000));
 #endif
 }
 

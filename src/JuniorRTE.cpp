@@ -56,6 +56,8 @@ int main(int argc, char* argv[])
     config.parseFile(config_file);
     unsigned char _allowRelay = 1;
     config.getValue("AllowRelay", _allowRelay);
+    unsigned char _delay = 1;
+    config.getValue("RTE_CycleTime", _delay);
 
     // Create the public socket that allows APIs to find us.
     JrSocket publicSocket(std::string("JuniorRTE"));
@@ -98,7 +100,7 @@ int main(int argc, char* argv[])
     while(!exit_flag)
     {
         // Wait 1 millisecond so we don't hog the CPU
-        JrSleep(1);
+        JrSleep(_delay);
 
         // Check the public socket for outgoing requests
         publicSocket.recvMsg(msglist);

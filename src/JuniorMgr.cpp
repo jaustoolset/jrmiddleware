@@ -26,7 +26,9 @@ JuniorMgr::JuniorMgr():
     _message_counter = 1;
     _maxMsgHistory = 100;   // as a message count
     _oldMsgTimeout = 10;    // in seconds
-    _detectDuplicates =1;   
+    _detectDuplicates =1; 
+    _max_retries = 3;
+    _ack_timeout = 100; // in milliseconds
 }
 
 JuniorMgr::~JuniorMgr()
@@ -70,7 +72,7 @@ bool JuniorMgr::isDuplicateMsg(Message* msg)
     while (iter != _recentMsgs.end())
     {
         // Make sure this entry isn't old (in time)
-        if ((JrGetTimestamp() - iter->first) > _oldMsgTimeout)
+        if ((unsigned long)((JrGetTimestamp() - iter->first)) > (_oldMsgTimeout*1000))
         {
             iter = _recentMsgs.erase(iter);
             continue;
@@ -109,7 +111,7 @@ void JuniorMgr::checkLargeMsgBuffer()
         // If the message in the history buffer is too old, discard it.
         // This prevents us from filling the buffer with partial messages
         // that never found a mate.
-        if ((JrGetTimestamp() - msgIter->first) > _oldMsgTimeout)
+        if ((unsigned long)(JrGetTimestamp() - msgIter->first) > (_oldMsgTimeout*1000))
         {
             // Discard the message and remove from the list
             delete (msgIter->second);
@@ -298,14 +300,17 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
         // TO DO : Pend here for ACK-NAK
         if (flags & GuarenteeDelivery)
         {
-            // We need to wait for an acknowledgement.  Note that we wait a maximum of
-            // 150 milliseconds, and retransmit the original message every 50 milliseconds.
-            // While waiting, we need to process other messages.
+            // We need to wait for an acknowledgement.  We wait a configurable
+            // period of time, resend a configurable number of times.
             MessageList msglist;
-            int counter = 0; bool acked = false;
-            while ((counter < 400) && !acked)
+            unsigned long last_msg_time = JrGetTimestamp();
+            int send_count = 0; bool acked = false;
+            while (!acked)
             {
+                // sleep a bit to free up the CPU
                 JrSleep(1);
+
+                // While waiting, we need to process other messages. 
                 Transport::TransportError ret = _socket_ptr->recvMsg(msglist);
                 while (!msglist.empty())
                 {
@@ -334,14 +339,14 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
                 // seems wonky to have to do, but it's part of JAUS.
                 if (msg.getDataControlFlag() == 2) msg.setDataControlFlag(4);
 
-                // Every 100 milliseconds, resend the message.
-                counter++;
-                if ((counter % 100) == 0) _socket_ptr->sendMsg(msg);
+                // See if it's time to resend the message (or timeout)
+                if ((unsigned long)(JrGetTimestamp() - last_msg_time) > _ack_timeout)
+                {
+                    if (++send_count > _max_retries) return Timeout;
+                    _socket_ptr->sendMsg(msg);
+                    last_msg_time = JrGetTimestamp();
+                }
             }
-            
-            // If we didn't successfully receive a acknowledgement, we
-            // return an error.
-            if (counter == 400) return Timeout;
         }
     } while(bytes_sent < size);  // continue to loop until we've sent
                                  // the entire buffer.
@@ -490,6 +495,7 @@ JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
     config.getValue("MaxMsgHistory", _maxMsgHistory);
     config.getValue("OldMsgTimeout", _oldMsgTimeout);
     config.getValue("DropDuplicateMsgs", _detectDuplicates);
-
+    config.getValue("MaxAckNakRetries", _max_retries);
+    config.getValue("AckTimeout", _ack_timeout);
     return Ok;
 }
