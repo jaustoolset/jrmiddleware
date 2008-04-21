@@ -23,11 +23,22 @@ if os.name == "nt":
     testapp = dllenv.Program( target = 'jr_test',
 							 source = 'jr_test.cpp',
 							 LIBS = 'Junior' )
+							 
+    ratestapp = dllenv.Program( target = 'ra_test',
+							 source = 'ra_test.cpp',
+							 LIBS = 'Junior' )
+							 
 
 else:
                            
     testapp = baseEnv.Program( target = 'jr_test',
 							  source = 'jr_test.cpp',
 							  LIBS = 'Junior' )
+
+    ratestapp = baseEnv.Program( target = 'ra_test',
+							  source = 'ra_if_test.cpp',
+							  LIBS = 'Junior' )
+
 	                                                    
 baseEnv.Install( baseEnv['INSTALL_BINDIR'], testapp )
+baseEnv.Install( baseEnv['INSTALL_BINDIR'], ratestapp )
