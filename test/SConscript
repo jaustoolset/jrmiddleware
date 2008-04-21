@@ -20,14 +20,14 @@ dllenv.Append( CCFLAGS = ['-D__USE_DLL__'] )
 # On Windows, use a DLL for the API.
 if os.name == "nt":
                                                                 
-    testapp = dllenv.Program( target = 'jr_test',
-							 source = 'jr_test.cpp',
+    testapp = dllenv.Program( target = 'ra_test',
+							 source = 'ra_test.cpp',
 							 LIBS = 'Junior' )
 
 else:
                            
-    testapp = baseEnv.Program( target = 'jr_test',
-							  source = 'jr_test.cpp',
+    testapp = baseEnv.Program( target = 'ra_test',
+							  source = 'ra_test.cpp',
 							  LIBS = 'Junior' )
 	                                                    
 baseEnv.Install( baseEnv['INSTALL_BINDIR'], testapp )
