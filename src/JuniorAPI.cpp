@@ -10,9 +10,45 @@
  ************************************************************************
  */
 #include "JuniorAPI.h"
+#include "JuniorRA.h"
 #include "JuniorMgr.h"
 
 using namespace DeVivo::Junior;
+static std::vector<int> handles;
+
+
+// This function checks all known handles for pending
+// messages.  Any handle with 1 or more messages
+// waiting is returned in the list.  This function does 
+// not allocate any memory; therefore, the list must be
+// allocated by the calling application, with a maximum
+// size passed in 'size_of_list'.  This value will be modified
+// to equal the total number of handles with messages waiting.
+//
+JrErrorCode JrCheckAllHandles(int* list, int& size_of_list)
+{
+    JrErrorCode ret = Ok;
+    int count = 0;
+    if (list == NULL) return InvalidParams;
+
+    // Check each known handle for outstanding messages.
+    for (int i=0; i < handles.size(); i++)
+    {
+        if (handles[i] == 0) continue;
+        if (((JuniorMgr*) handles[i])->pending())
+        {
+            if (count < size_of_list) list[count] = handles[i];
+            count++;
+        }
+    }
+
+    // If we actually have more handles with messages than 
+    // the list allows us to return, mark as Overflow.
+    if (count > size_of_list) ret = Overflow;
+    size_of_list = count;
+    return ret;
+}
+
 
 JrErrorCode JrSend(int handle,
            unsigned long destination, 
@@ -26,6 +62,25 @@ JrErrorCode JrSend(int handle,
     JuniorMgr* mgr = (JuniorMgr*) handle;
     return (mgr->sendto(destination, bufsize, buffer, priority, flags, msg_id));
 }
+
+JrErrorCode RaSend(int handle,
+                   unsigned int bufsize,
+                   const char* buffer)
+{
+    if (handle == 0) return NotInitialized;
+    JuniorMgr* mgr = (JuniorMgr*) handle;
+    return (mgr->sendto(bufsize, buffer));
+}
+
+JrErrorCode RaReceive(int handle,
+                      unsigned int* bufsize,
+                      char* buffer)
+{
+    if (handle == 0) return NotInitialized;
+    JuniorMgr* mgr = (JuniorMgr*) handle;
+    return (mgr->recvfrom(bufsize, buffer));
+}
+
 
 JrErrorCode JrBroadcast(int handle,
               unsigned short msg_id,
@@ -67,7 +122,10 @@ JrErrorCode JrConnect(unsigned long id, const char* config_file, int* handle)
         *handle = 0;
     }
     else
+    {
         *handle = (int)mgr;
+        handles.push_back((int) mgr);
+    }
     return ret;
 }
 
@@ -76,5 +134,15 @@ JrErrorCode JrDisconnect(int handle)
     if (handle == 0) return NotInitialized;
     JuniorMgr* mgr = (JuniorMgr*) handle;
     delete(mgr);
+
+    // find it in the static list
+    for (int i=0; i < handles.size(); i++)
+    {
+        if (handles[i] == handle)
+        {
+            handles[i] = 0;
+            break;
+        }
+    }
     return Ok;
 }

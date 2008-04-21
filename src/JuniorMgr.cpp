@@ -29,6 +29,7 @@ JuniorMgr::JuniorMgr():
     _detectDuplicates =1; 
     _max_retries = 3;
     _ack_timeout = 100; // in milliseconds
+    _msg_count = 0;
 }
 
 JuniorMgr::~JuniorMgr()
@@ -59,6 +60,14 @@ void JuniorMgr::sendAckMsg( Message* incoming )
     response.setAckNakFlag(3);
     response.setPriority(incoming->getPriority());
     _socket_ptr->sendMsg(response);
+}
+
+// Returns the number of messages waiting, either in a local buffer or
+// in the queue
+unsigned char JuniorMgr::pending()
+{
+    unsigned char count = _msg_count + _socket_ptr->messagesInQueue();
+    return (count);
 }
 
 
@@ -164,10 +173,12 @@ void JuniorMgr::checkLargeMsgBuffer()
                 if (msgIter->second->getPriority() > JrMaxPriority)
                 {
                     _buffers[JrMaxPriority].push_back(msgIter->second);
+                    _msg_count++;
                 }
                 else
                 {
                     _buffers[msgIter->second->getPriority()].push_back(msgIter->second);
+                    _msg_count++;
                 }
 
                 // Last, we need to erase the first message in the set from 
@@ -217,10 +228,12 @@ bool JuniorMgr::addMsgToBuffer(Message* msg)
     else if (msg->getPriority() > JrMaxPriority)
     {
         _buffers[JrMaxPriority].push_back(msg);
+        _msg_count++;
     }
     else
     {
         _buffers[msg->getPriority()].push_back(msg);
+        _msg_count++;
     }
 
     return true;
@@ -238,6 +251,10 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
 
     // Modify the priority to not exceed the 4 bit space
     if (priority > JrMaxPriority) priority = JrMaxPriority;
+
+    // As per the Standard, ServiceConnection and ACK/NAK cannot
+    // be set at the same time
+    if ((flags & 0x03) == 0x03) return InvalidParams;
 
     // If the destination identifier contains wildcard characters,
     // we need to route the message as a broadcast instead of a unicast.
@@ -271,7 +288,7 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
         msg.setSourceId(_id);
         msg.setPriority(priority);
         msg.setMessageCode(code);
-        if (flags & GuarenteeDelivery) msg.setAckNakFlag(1);
+        if (flags & GuaranteeDelivery) msg.setAckNakFlag(1);
         if (flags & ServiceConnection) msg.setServiceConnection(1);
         if (flags & ExperimentalFlag) msg.setExperimental(1);
         msg.setSequenceNumber(_message_counter);
@@ -298,7 +315,7 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
 
 
         // TO DO : Pend here for ACK-NAK
-        if (flags & GuarenteeDelivery)
+        if (flags & GuaranteeDelivery)
         {
             // We need to wait for an acknowledgement.  We wait a configurable
             // period of time, resend a configurable number of times.
@@ -353,6 +370,22 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
     return Ok;
 }
 
+
+// This form assumes that the 16-byte header is already in place.
+JrErrorCode JuniorMgr::sendto( unsigned int size, const char* buffer )
+{
+    // Put the entire message in an archive, so we can 
+    // unmarshall it into a Message object
+    Archive packed_msg;
+    packed_msg.setData(buffer, size);
+    Message msg;
+    msg.unpack(packed_msg);    
+
+    // send the message
+    _socket_ptr->sendMsg(msg);
+    return Ok;
+}
+
 JrErrorCode JuniorMgr::recvfrom(unsigned long* sender,
                         unsigned int* bufsize,
                         char* buffer,
@@ -360,6 +393,7 @@ JrErrorCode JuniorMgr::recvfrom(unsigned long* sender,
                         int* flags,
                         MessageCode* code)
 {
+        // Put the entire message in an archive, so we can 
     // Check the socket for incoming messages.  
     MessageList msglist;
     Transport::TransportError ret = _socket_ptr->recvMsg(msglist);
@@ -387,6 +421,7 @@ JrErrorCode JuniorMgr::recvfrom(unsigned long* sender,
             // Found a non-empty buffer.  Pop the message out and return the data.
             Message* value = _buffers[j].front();
             _buffers[j].pop_front();
+            _msg_count--;
 
             // Extract the data fields
             if (sender != NULL) *sender = value->getSourceId().val;
@@ -420,6 +455,62 @@ JrErrorCode JuniorMgr::recvfrom(unsigned long* sender,
     // Getting to this point means we have no messages to return.
     return NoMessages;
 }
+
+// This form assumes that the 16-byte header is already in place.
+JrErrorCode JuniorMgr::recvfrom( unsigned int* size, char* buffer )
+{
+    // Check the socket for incoming messages.  
+    MessageList msglist;
+    Transport::TransportError ret = _socket_ptr->recvMsg(msglist);
+
+    // Process each message in the received list
+    while (!msglist.empty())
+    {
+        // Extract the message from the list
+        Message* msg = msglist.front();
+        msglist.pop_front();
+
+        // Add this message to a priority buffer
+        _buffers[msg->getPriority()].push_back(msg);
+        _msg_count++;
+
+    }
+
+    // Check each priority based buffer (highest first) looking for a message
+    for (int j = JrMaxPriority; j >= 0; j--)
+    {
+        if (!_buffers[j].empty())
+        {
+            // Found a non-empty buffer.  Pop the message out and return the data.
+
+            Message* value = _buffers[j].front();
+            _buffers[j].pop_front();
+            _msg_count--;
+
+            // Return the entire packed message, including the header
+            Archive packed_msg;
+            value->pack(packed_msg);
+
+            // Make sure the incoming packet doesn't exceed the buffer
+            JrErrorCode ret = Ok;
+            if (*size < packed_msg.getArchiveLength())
+                ret = Overflow;
+            else
+                *size = packed_msg.getArchiveLength();
+
+            // Copy into the users buffer and return
+            memcpy( buffer, packed_msg.getArchive(), *size);
+            delete value;
+            return ret;
+        }
+    }
+
+    // Getting to this point means we have no messages to return.
+    return NoMessages;
+}
+
+
+
 
 JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
 {
@@ -470,8 +561,17 @@ JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
     // Wait for a connection accept message
     MessageList msglist;
     bool connected = false;
+    int counter = 0;
     while (!connected)
     {
+        if (counter++ > 100)
+        {
+            // timeout.
+            delete mySocket;
+            return Timeout;
+        }
+
+        // Check for incoming messages
         mySocket->recvMsg(msglist);
         while (!msglist.empty())
         {

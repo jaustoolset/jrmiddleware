@@ -46,6 +46,24 @@ JrSocket::~JrSocket()
     }
 }
 
+unsigned char  JrSocket::messagesInQueue()
+{
+    // Returns the number of messages waiting in the queue
+#ifdef WINDOWS
+    DWORD count;
+    GetMailslotInfo(sock, NULL, NULL, &count, NULL);
+    return ((unsigned char) count);
+#else
+    // for Linux, we can't know the number of messages, just that
+    // there is more than zero.
+    struct timeval timeout;
+    timeout.tv_sec=0; timeout.tv_usec=0;
+    fd_set set; FD_ZERO(&set); FD_SET(sock, &set);
+    if (select(sock+1, &set, NULL, NULL, &timeout) > 0) return 1;
+    return 0;
+#endif
+}
+
 #ifdef WINDOWS
 SocketId JrSocket::OpenMailslot(std::string name)
 {

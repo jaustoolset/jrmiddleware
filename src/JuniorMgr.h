@@ -36,13 +36,19 @@ public:
     JrErrorCode sendto( unsigned long destination, unsigned int size, 
                 const char* buffer, int priority, int flags, MessageCode code = 0);
 
+    JrErrorCode sendto( unsigned int size, const char* buffer);
+
     JrErrorCode recvfrom( unsigned long* sender, unsigned int* bufsize,
                   char* buffer, int* priority, int* flags, MessageCode* code = NULL);
+    
+    JrErrorCode recvfrom( unsigned int* bufsize, char* buffer );
 
     JrErrorCode connect(unsigned long id, std::string config_file);
 
-private:
+    unsigned char pending( );
 
+private:
+ 
     // Define a couple of private helper functions
     unsigned int umin(unsigned int x, unsigned int y);
     void sendAckMsg(Message* source);
@@ -62,6 +68,7 @@ private:
     MsgIdList          _recentMsgs;
     unsigned char      _max_retries;
     unsigned char      _ack_timeout;
+    unsigned int       _msg_count;
 
     // Configuration data
     unsigned short _maxMsgHistory;      // as a message count

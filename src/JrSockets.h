@@ -41,6 +41,7 @@ public:
     TransportError initialize(std::string source);
     TransportError setDestination(std::string destination);
     TransportError removeDestination(JAUS_ID id);
+    unsigned char  messagesInQueue();
    
 protected:
 
