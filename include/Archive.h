@@ -183,7 +183,7 @@ public:
     char*          getArchive()       { return data; }
 
     // Debugging
-    void printArchive();
+    void printArchive(int size);
 
 protected:
 
@@ -197,13 +197,14 @@ protected:
 
 };
 
-inline void Archive::printArchive()
+inline void Archive::printArchive(int size)
 {
     std::cout << "Archive length: " << data_length << std::endl;
     std::cout << "Archive: ";
-    for (int i=0; i < data_length; i++)
-        std::cout << (int) *(data+i) << " ";
-    std::cout << std::endl;
+    int max_print = (size > data_length) ? data_length : size;
+    for (int i=0; i < max_print; i++)
+        printf(" %x", (char) *(data+i));
+    printf("\n");
 }
 
 inline void Archive::setData( const char* buffer, unsigned short length )

@@ -27,11 +27,11 @@ extern "C" {
 
 // Define an enumerated list of error codes used by the Junior API.
 typedef enum {Ok, NoMessages, InvalidID, Overflow, InitFailed, 
-              AddrUnknown, Timeout, UnknownError, NotInitialized} JrErrorCode;
+              InvalidParams, Timeout, UnknownError, NotInitialized} JrErrorCode;
 
 // Define the list of valid flags.  These can be logically AND'ed into
 // the "flags" field to allow for more than one flag per message.
-const unsigned char GuarenteeDelivery = 0x01;
+const unsigned char GuaranteeDelivery = 0x01;
 const unsigned char ServiceConnection = 0x02;
 const unsigned char ExperimentalFlag  = 0x04;
 
@@ -57,6 +57,8 @@ JrErrorCode DLL_MACRO JrBroadcast(int handle,
               unsigned int size,
               const char* buffer,
               int priority);
+
+JrErrorCode DLL_MACRO JrCheckAllHandles(int* list, int& size_of_list);
 
 JrErrorCode DLL_MACRO JrConnect(unsigned long id, 
                                 const char* config_file, 
