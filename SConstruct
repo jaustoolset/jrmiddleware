@@ -27,7 +27,7 @@ if baseEnv['PLATFORM'] == 'cygwin':
 # Some additional stuff to do if we're building for windows
 if os.name == "nt":                     
    print "scons: Building for Windows..."
-   baseEnv.Append( CCFLAGS = ['-DWINDOWS', '-EHsc'] )
+   baseEnv.Append( CCFLAGS = ['-DWINDOWS', '-EHsc','-D_CRT_SECURE_NO_DEPRECATE'])
    baseEnv.Append( CPPPATH = [baseEnv['ENV']['SDKPATH']+"/Include"] )
    baseEnv.Append( LIBPATH = [baseEnv['ENV']['SDKPATH']+"/Lib"] )
    baseEnv.Append( LINKFLAGS = ['/DEFAULTLIB:"WSock32.Lib"'] )
