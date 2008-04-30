@@ -1,0 +1,10 @@
+﻿LIBRARY Junior
+EXPORTS
+	JrConnect
+	JrSend
+	JrReceive
+	JrBroadcast
+	JrCheckAllHandles
+	RaSend
+	RaReceive
+	JrDisconnect
