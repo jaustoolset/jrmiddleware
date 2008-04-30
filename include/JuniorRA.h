@@ -24,11 +24,11 @@
 // Extern the definitions to avoid name mangling
 extern "C" {
 
-JrErrorCode DLL_MACRO RaSend( int handle,
+JrErrorCode _stdcall RaSend( int handle,
              unsigned int size,
              const char* buffer);
 
-JrErrorCode DLL_MACRO RaReceive( int handle,
+JrErrorCode _stdcall RaReceive( int handle,
                 unsigned int* bufsize,
                 char* buffer );
 

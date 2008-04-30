@@ -12,16 +12,6 @@
 #ifndef __JUNIOR_API_H
 #define __JUNIOR_API_H
 
-// Manage the defines for building (or using) the
-// Junior Toolset as a DLL.
-#if defined(__BUILD_DLL__)
-#define DLL_MACRO __declspec(dllexport)
-#elif defined(__USE_DLL__)
-#define DLL_MACRO __declspec(dllimport)
-#else
-#define DLL_MACRO 
-#endif
-
 // Extern the definitions to avoid name mangling
 extern "C" {
 
@@ -36,7 +26,7 @@ const unsigned char ServiceConnection = 0x02;
 const unsigned char ExperimentalFlag  = 0x04;
 
 // Functional interface.  
-JrErrorCode DLL_MACRO JrSend(int handle,
+JrErrorCode _stdcall JrSend(int handle,
            unsigned long destination, 
            unsigned short msg_id,
            unsigned int size, 
@@ -44,7 +34,7 @@ JrErrorCode DLL_MACRO JrSend(int handle,
            int priority,
            int flags);
 
-JrErrorCode DLL_MACRO JrReceive(int handle,
+JrErrorCode _stdcall JrReceive(int handle,
              unsigned long* source,
              unsigned short* msg_id,
              unsigned int* bufsize,
@@ -52,19 +42,19 @@ JrErrorCode DLL_MACRO JrReceive(int handle,
              int* priority,
              int* flags );
 
-JrErrorCode DLL_MACRO JrBroadcast(int handle,
+JrErrorCode _stdcall JrBroadcast(int handle,
               unsigned short msg_id,
               unsigned int size,
               const char* buffer,
               int priority);
 
-JrErrorCode DLL_MACRO JrCheckAllHandles(int* list, int& size_of_list);
+JrErrorCode _stdcall JrCheckAllHandles(int* list, int& size_of_list);
 
-JrErrorCode DLL_MACRO JrConnect(unsigned long id, 
+JrErrorCode _stdcall JrConnect(unsigned long id, 
                                 const char* config_file, 
                                 int* handle);
 
-JrErrorCode DLL_MACRO JrDisconnect(int handle);
+JrErrorCode _stdcall JrDisconnect(int handle);
 
 } // end extern "C"
 #endif
