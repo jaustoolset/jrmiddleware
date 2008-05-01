@@ -25,7 +25,7 @@ static std::vector<int> handles;
 // size passed in 'size_of_list'.  This value will be modified
 // to equal the total number of handles with messages waiting.
 //
-JrErrorCode JrCheckAllHandles(int* list, int& size_of_list)
+JrErrorCode _stdcall JrCheckAllHandles(int* list, int& size_of_list)
 {
     JrErrorCode ret = Ok;
     int count = 0;
@@ -50,7 +50,7 @@ JrErrorCode JrCheckAllHandles(int* list, int& size_of_list)
 }
 
 
-JrErrorCode JrSend(int handle,
+JrErrorCode _stdcall JrSend(int handle,
            unsigned long destination, 
            unsigned short msg_id,
            unsigned int bufsize, 
@@ -63,7 +63,7 @@ JrErrorCode JrSend(int handle,
     return (mgr->sendto(destination, bufsize, buffer, priority, flags, msg_id));
 }
 
-JrErrorCode RaSend(int handle,
+JrErrorCode _stdcall RaSend(int handle,
                    unsigned int bufsize,
                    const char* buffer)
 {
@@ -72,7 +72,7 @@ JrErrorCode RaSend(int handle,
     return (mgr->sendto(bufsize, buffer));
 }
 
-JrErrorCode RaReceive(int handle,
+JrErrorCode _stdcall RaReceive(int handle,
                       unsigned int* bufsize,
                       char* buffer)
 {
@@ -82,7 +82,7 @@ JrErrorCode RaReceive(int handle,
 }
 
 
-JrErrorCode JrBroadcast(int handle,
+JrErrorCode _stdcall JrBroadcast(int handle,
               unsigned short msg_id,
               unsigned int bufsize,
               const char* buffer,
@@ -91,7 +91,7 @@ JrErrorCode JrBroadcast(int handle,
     return JrSend(handle, 0xFFFFFFFF, msg_id, bufsize, buffer, priority, 0);
 }
 
-JrErrorCode JrReceive(int handle,
+JrErrorCode _stdcall JrReceive(int handle,
              unsigned long* sender,
              unsigned short* msg_id,
              unsigned int* bufsize,
@@ -104,7 +104,7 @@ JrErrorCode JrReceive(int handle,
     return (mgr->recvfrom(sender, bufsize, buffer, priority, flags, msg_id));
 }
 
-JrErrorCode JrConnect(unsigned long id, const char* config_file, int* handle)
+JrErrorCode _stdcall JrConnect(unsigned long id, const char* config_file, int* handle)
 {
     if (handle == NULL) return InitFailed;
 
@@ -129,7 +129,7 @@ JrErrorCode JrConnect(unsigned long id, const char* config_file, int* handle)
     return ret;
 }
 
-JrErrorCode JrDisconnect(int handle)
+JrErrorCode _stdcall JrDisconnect(int handle)
 {    
     if (handle == 0) return NotInitialized;
     JuniorMgr* mgr = (JuniorMgr*) handle;
