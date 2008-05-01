@@ -26,6 +26,7 @@ API_Files = [
 # the library as a Shared Library (dll or so).
 dllenv = baseEnv.Copy()
 dllenv.Append( CCFLAGS = ['-D__BUILD_DLL__'] ) 
+dllenv.Append( LINKFLAGS = ['/DEF:Junior.DEF'] )
 dllenv['SHOBJPREFIX'] = 'sh'
 ocuenv = baseEnv.Copy()
 ocuenv.Append( CCFLAGS = ['-D__USE_DLL__'] )                 
