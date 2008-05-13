@@ -199,9 +199,10 @@ void JuniorMgr::checkLargeMsgBuffer()
 
 bool JuniorMgr::addMsgToBuffer(Message* msg)
 {
+    // If the source of this message is the RTE, throw it away.
     // If this is an ack/nak response or a duplicate message, disregard it.
     if ((msg->getAckNakFlag() == 2) || (msg->getAckNakFlag() == 3) ||
-        isDuplicateMsg(msg))
+        isDuplicateMsg(msg) || (msg->getSourceId().val == 0))
     {
         delete msg;
         return false;
@@ -570,6 +571,9 @@ JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
             delete mySocket;
             return Timeout;
         }
+
+        // Resend the connection request msg
+        if ((counter % 25) == 0) mySocket->sendMsg(msg);
 
         // Check for incoming messages
         mySocket->recvMsg(msglist);

@@ -145,6 +145,11 @@ Transport::TransportError JrSocket::sendMsg(Message& msg)
             {
                 msg.setDestinationId(_map.getList()[i].first);
                 result = sendMsg(msg, _map.getList()[i].second);
+
+                // If we failed to send to this destination, remove
+                // it from our map.
+                if (result == Failed)
+                    removeDestination(_map.getList()[i].first);
             }
         }
 
@@ -221,6 +226,8 @@ Transport::TransportError JrSocket::recvMsg(MessageList& msglist)
 
 Transport::TransportError JrSocket::broadcastMsg(Message& msg)
 {
+    Transport::TransportError result = AddrUnknown;
+
     // Connected sockets send to a single destination only.
     if (is_connected)
     {
@@ -234,7 +241,12 @@ Transport::TransportError JrSocket::broadcastMsg(Message& msg)
         {
             if ((msg.getDestinationId() == _map.getList()[i].first) &&
                 (msg.getSourceId() != _map.getList()[i].first))
-                sendMsg(msg, _map.getList()[i].second);
+                result = sendMsg(msg, _map.getList()[i].second);
+
+            // If we failed to send to this destination, remove
+            // it from our map.
+            if (result == Failed)
+                removeDestination(_map.getList()[i].first);
         }
     }
     return Ok;
