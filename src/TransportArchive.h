@@ -40,6 +40,7 @@ class TransportArchive : public Archive
     virtual unsigned char getHeaderLength() {return 0;}
     virtual void removeHeadMsg() { }
     virtual char* getJausMsgPtr( ) { return &data[0]; }
+    virtual void clear() = 0;
 };
 
 
@@ -105,6 +106,11 @@ class JUDPArchive : public TransportArchive
         getMsgLength(length);
         removeAt(1, 4+length);
     }
+    void clear()
+    {
+        // reset the data_length to drop the payload
+        data_length = 5;
+    }
 };
 
 
@@ -139,7 +145,11 @@ class OPCArchive : public TransportArchive
         getMsgLength(length);
         removeAt(OPC_HeaderSize, length);
     }
-
+    void clear()
+    {
+        // reset the data_length to drop the payload
+        data_length = OPC_HeaderSize;
+    }
 };
 
 

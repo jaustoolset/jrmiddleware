@@ -171,6 +171,7 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
             //
             Archive msg_archive;
             msg.pack(msg_archive);
+            payload->clear();
             payload->append( msg_archive );
 
             //
