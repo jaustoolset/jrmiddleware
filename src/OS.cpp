@@ -41,6 +41,12 @@ void DeVivo::Junior::JrSpawnProcess(std::string path, std::string arg)
         PROCESS_INFORMATION pi;
         memset(&si, 0, sizeof(STARTUPINFO)); si.cb = sizeof(si);
         memset(&pi, 0, sizeof(PROCESS_INFORMATION));
+
+        // turn off the window
+        si.dwFlags = STARTF_USESHOWWINDOW;
+        si.wShowWindow = SW_HIDE;
+
+        // Now create the process that points to the RTE
         sprintf(cmd, "%s %s\0", path.c_str(), arg.c_str());
         BOOL result = CreateProcess(  NULL, LPSTR(cmd), NULL, NULL, FALSE, 
             HIGH_PRIORITY_CLASS | CREATE_NEW_PROCESS_GROUP, NULL,  NULL,  &si, &pi);
