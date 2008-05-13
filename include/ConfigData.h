@@ -40,7 +40,7 @@ public:
     //
     // Special case for string handling
     //
-    ConfigError getValue(std::string name, std::string value)
+    ConfigError getValue(std::string name, std::string& value)
     {
         if (_map.count(name) == 0) return ValueNotFound;
         value = _map[name];
