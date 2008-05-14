@@ -23,6 +23,7 @@
     #include <netdb.h>
     #include <sys/un.h>
     #include <arpa/inet.h>
+    #include <sys/time.h>
 #ifndef __CYGWIN__
     #include <ifaddrs.h>
 #endif
