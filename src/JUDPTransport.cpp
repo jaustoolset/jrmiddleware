@@ -46,16 +46,21 @@ JUDPTransport::~JUDPTransport()
 
 Transport::TransportError JUDPTransport::initialize( std::string filename )
 {
-#ifdef WINDOWS
-    // Must initialize the windows socket library before using
-    WSADATA temp;
-    WSAStartup(0x22, &temp);
-#endif
+    // Open the configuration file
+    ConfigData config;
+    config.parseFile(filename);
+
+    // Check to see if UDP has been switched off.  By default, it's on.
+    char use_udp = 1;
+    config.getValue("EnableUDPInterface", use_udp);
+    if (!use_udp)
+    {
+        printf("UDP communication deactivated in configuration file\n");
+        return InitFailed;
+    }
 
     // Read the configuration file, and set-up defaults for anything
     // that isn't specified.
-    ConfigData config;
-    config.parseFile(filename);
     unsigned short port = 3794;
     config.getValue("UDP_Port", port);
     unsigned char multicast_TTL = 1;
@@ -69,7 +74,13 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     // Set-up the multicast address based on config data
     _multicastAddr.port = port;
     _multicastAddr.addr = inet_addr(multicast_addr.c_str());
-    
+
+#ifdef WINDOWS
+    // Must initialize the windows socket library before using
+    WSADATA temp;
+    WSAStartup(0x22, &temp);
+#endif
+
     // Create the socket
     _socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (_socket < 0)
@@ -144,7 +155,6 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
     if (_use_opc) payload = new OPCArchive;
     else payload = new JUDPArchive;
     if (payload == NULL) return Failed;
-    payload->setMsgLength( msg.getMsgLength() );
     
     //
     // Loop through all known destination, sending to each match.
@@ -171,8 +181,8 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
             //
             Archive msg_archive;
             msg.pack(msg_archive);
-            payload->clear();
-            payload->append( msg_archive );
+            payload->reset();
+            payload->setJausMsgData( msg_archive );
 
             //
             // Apply header compression
@@ -395,8 +405,7 @@ Transport::TransportError JUDPTransport::broadcastMsg(Message& msg)
     //
     Archive msg_archive;
     msg.pack(msg_archive);
-    payload->append( msg_archive );
-    payload->setMsgLength( msg.getMsgLength() );
+    payload->setJausMsgData( msg_archive );
 
     // Create the destination address structure
     struct sockaddr_in dest;

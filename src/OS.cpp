@@ -127,6 +127,20 @@ std::list<unsigned long> DeVivo::Junior::JrGetIPAddresses()
    return addresses;
 }
 
+bool DeVivo::Junior::JrStrCaseCompare(std::string str1, std::string str2)
+{
+#ifdef WINDOWS
+    return 
+        (CompareString(LOCALE_SYSTEM_DEFAULT, NORM_IGNORECASE,
+          str1.c_str(), str1.size(), str2.c_str(), str2.size())==2);
+#else
+    if (str1.size() != str2.size()) return false;
+    return ((bool)(!strncasecmp(str1.c_str(), str2.c_str(), str1.size())));
+#endif
+}
+
+
+
 
 
 

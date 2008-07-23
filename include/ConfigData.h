@@ -44,6 +44,10 @@ public:
     {
         if (_map.count(name) == 0) return ValueNotFound;
         value = _map[name];
+
+        // strip line-feed and carriage return values
+        value = value.substr(0, value.find_last_not_of("\n")+1);
+        value = value.substr(0, value.find_last_not_of("\r")+1);
         return Ok;
     }
 

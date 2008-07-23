@@ -16,6 +16,7 @@
 #include "ConfigData.h"
 #include "JrSockets.h"
 #include "JUDPTransport.h"
+#include "JSerial.h"
 #include "Transport.h"
 #include "Types.h"
 #include "OS.h"
@@ -92,6 +93,15 @@ int main(int argc, char* argv[])
     else
         _transports.push_back(&udp);
 
+    // Add Serial
+    JSerial serial;
+    if (serial.initialize(config_file) != Transport::Ok)
+    {
+        printf("Unable to initialize serial communications.\n");
+    }
+    else
+        _transports.push_back(&serial);
+
     // Predefine a list of messages we receive from the transports.
     MessageList msglist;
     Message* msg;
@@ -156,6 +166,7 @@ int main(int argc, char* argv[])
                     // Send this message to all recipients on all transports.
                     for (_iter = _transports.begin(); _iter != _transports.end(); ++_iter)
                     {
+                        //printf("broadcasting message\n");
                         (*_iter)->broadcastMsg(*msg);
                     }
                 }

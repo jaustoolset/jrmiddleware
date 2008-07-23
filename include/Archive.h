@@ -150,8 +150,9 @@ public:
     // Rewind the archive to the beginning
     void rewind() { offset = 0; }
 
-    // Specialized function for appending an archive on this one
+    // Specialized function for appending data onto the archive
     void append(Archive& archive);
+    void append(char* buffer, unsigned int length);
 
     // We can't use a template to access a string directly
     void getValueAt(int index, std::string& value)
@@ -165,7 +166,25 @@ public:
     template<class T> void getValueAt(int index, T& value)
     {
         value = *((T*) (data+index));
-    } 
+        bool isBigHost = (htons(256) == 256);
+        if (( isBigHost && (pack_mode == LittleEndian)) ||
+            (!isBigHost && (pack_mode == BigEndian)))
+            value = swapBytes(value);
+    }
+
+    template<class T> void setValueAt(int index, T value)
+    {
+        // Switch to network byte ordering if the length of the value
+        // is more than a single byte.  
+        bool isBigHost = (htons(256) == 256);
+        if (( isBigHost && (pack_mode == LittleEndian)) ||
+            (!isBigHost && (pack_mode == BigEndian)))
+        {
+            *((T*)(data+index)) = swapBytes(value);
+        }
+        else 
+            *((T*)(data+index)) = value;
+    }
 
     // Set the data explicitly from a raw character buffer
     void setData( const char* buffer, unsigned short length);
@@ -173,6 +192,10 @@ public:
     // Insert and remove data in the middle of the buffer
     void insertAt( int index, Archive& archive );
     void removeAt( int index, int length );
+
+    // Clear the archive completely
+    void clear() {data_length = 0;}
+    bool empty() {return (data_length==0);}
 
     // Set the packing mode (little versus big endian)
     enum PackMode { LittleEndian, BigEndian };
@@ -231,6 +254,14 @@ inline void Archive::append(Archive& archive)
     memcpy( data+data_length, archive.getArchive(),
             archive.getArchiveLength());
     data_length += archive.getArchiveLength();
+}
+
+inline void Archive::append(char* buffer, unsigned int length)
+{
+    // If necessary, grow the buffer to accommodate the new data
+    growBuffer(data_length + length);
+    memcpy( data+data_length, buffer, length);
+    data_length += length;
 }
 
 

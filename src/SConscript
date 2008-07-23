@@ -19,7 +19,9 @@ API_Files = [
     'JuniorMgr.cpp',
     'OS.cpp',
     'ConfigData.cpp',
-    'JUDPTransport.cpp'
+    'JUDPTransport.cpp',
+    'JSerial.cpp',
+    'ChecksumCRC.cpp'
 ]
 
 # Define multiple environments for building and using
