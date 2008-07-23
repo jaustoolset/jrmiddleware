@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
     // Make sure an id is specified
     if (argc < 2)
     {
-        printf("usage: ocu <my id> <dest id: optional>\n");
+        printf("usage: ocu <my id> <dest id: optional> <msg size: optional>\n");
         return 1;
     }
 
@@ -65,6 +65,15 @@ int main(int argc, char* argv[])
         std::stringstream t; t << argv[2];
         t >> dest;
     }
+
+    // Get the command line argument for message size
+    unsigned long size = 0;
+    if (argc > 3)
+    {
+        std::stringstream u; u << argv[3];
+        u >> size;
+    }
+
 
     // Connect to the Run-Time Engine
     int handle;
@@ -94,11 +103,17 @@ int main(int argc, char* argv[])
     // Do stuff
     while(!exit_flag)
     {
-        // Create a random message size.
-        do
+        // Create a random message size (unless command line arguments
+        // indicate something else
+        if (size != 0)
+            datasize = size;        
+        else
         {
-            datasize = (unsigned int) rand();
-        } while ((datasize > MaxBufferSize) || (datasize < 10));
+            do
+            {
+                datasize = (unsigned int) rand();
+            } while ((datasize > MaxBufferSize) || (datasize < 10));
+        }
 
         // Assign it a random message id
         unsigned short msg_id = (unsigned short) rand();
@@ -118,7 +133,7 @@ int main(int argc, char* argv[])
         }
 
         // check for incoming messages
-        for (int i=0; i<500; i++)
+        for (int i=0; i<5000; i++)
         {
             unsigned int buffersize = MaxBufferSize; msg_id = 0; int flags = 0;
             JrErrorCode ret = JrReceive(handle, &sender, &msg_id, &buffersize, buffer, NULL, &flags);
