@@ -25,6 +25,10 @@ const unsigned char GuaranteeDelivery = 0x01;
 const unsigned char ServiceConnection = 0x02;
 const unsigned char ExperimentalFlag  = 0x04;
 
+#ifndef WINDOWS
+#define _stdcall
+#endif
+
 // Functional interface.  
 JrErrorCode _stdcall JrSend(int handle,
            unsigned long destination, 
