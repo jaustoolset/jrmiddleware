@@ -330,7 +330,7 @@ Transport::TransportError JSerial::recvMsg(MessageList& msglist)
 
     // Nothing to do if we didn't read any bytes
     if (bytesRead <= 0) return NoMessages;
-    printf("read %ld bytes\n", bytesRead);
+    //printf("read %ld bytes\n", bytesRead);
 
     // We need to process the incoming stream byte-wise, since the 
     // stream may contain DLE-marked instructions.
