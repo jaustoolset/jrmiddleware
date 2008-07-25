@@ -276,6 +276,13 @@ class JSerialArchive : public TransportArchive
         if (getArchiveLength() < getHeaderLength())
             return false;
 
+        // Verify the packets version
+        if ((data[2] & 0XF0) != 0x10)
+        {
+            //printf("Invalid version\n");
+            return false;
+        }
+
         // Figure out where the header checksum is
         char addressSize = usesExplicitAddress() ? 2 : 0;
         if (!usesExplicitAddress() && !usesImplicitAddress())
