@@ -241,7 +241,7 @@ class JSerialArchive : public TransportArchive
         memset(data, 0, 17);
         data[0] = 0x10; // <DLE>
         data[1] = 0x01; // <SOH>
-        data[2] = 0x01; // version (no acknowledgement)
+        data[2] = 0x10; // version (no acknowledgement)
         data[5] = 0x10; // <DLE>
         data[6] = 0x02; // <STX>
         data[13] = 0x10; // <DLE>
@@ -352,11 +352,12 @@ class JSerialArchive : public TransportArchive
 
         // insert DLE markers for data fields
         // that coincidentally have the same value as the DLE.
+        int SOH_shift = 0;
         for (int i=0; i<data_length; i++)
         {
             // First make sure this is not an actual diagraph
             // (and therefore *should* be a DLE.
-            if ((i==0) || (i==5+addressSize) || (i==data_length-4))
+            if ((i==0) || (i==5+addressSize+SOH_shift) || (i==data_length-4))
                 continue;
 
             // now check for a DLE equivalent byte
@@ -376,6 +377,11 @@ class JSerialArchive : public TransportArchive
                 // now insert the DLE
                 data[i] = 0x10;
                 data_length += 1;
+
+                // If we inserted an element before the DLE-SOH pair,
+                // we need to shift our expectations of where
+                // to find the SOH
+                if (i<(5+addressSize)) SOH_shift++;
 
                 // manually increment the loop counter, since we
                 // inserted the new element.
