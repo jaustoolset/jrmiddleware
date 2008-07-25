@@ -57,6 +57,8 @@ Transport::TransportError JSerial::configureLink()
     _config.getValue("SerialParity", parity);
     unsigned char stopbits = 1;
     _config.getValue("SerialStopBits", stopbits);
+    unsigned char software_dataflow = 0;
+    _config.getValue("SerialSoftwareFlowControl", software_dataflow);
 
     // Check for valid parameters
     if ( !JrStrCaseCompare(parity, "odd") && 
@@ -71,6 +73,11 @@ Transport::TransportError JSerial::configureLink()
         printf("Invalid serial stop bits.  Using 1\n");
         stopbits = 1;
     }
+
+    // debug
+    printf("ByteSize:%d   Parity:%s    Stop:%d   Baud:%d\n", 8,
+        parity.c_str(), stopbits, baudrate);
+
 
 #ifdef WINDOWS
     
@@ -91,12 +98,21 @@ Transport::TransportError JSerial::configureLink()
         dcb.StopBits = TWOSTOPBITS;
     else
         dcb.StopBits = ONESTOPBIT;
+    if (software_dataflow)
+    {
+        // Configure for software flow control (XOn/XOff)
+        dcb.fInX = 1; dcb.fOutX = 1;
+        dcb.fOutxCtsFlow = 0;
+    }
+    else
+    {
+        // Configure for hardware flow control (RTS-CTS)
+        dcb.fInX = 0; dcb.fOutX = 0;
+        dcb.fRtsControl = RTS_CONTROL_HANDSHAKE;
+        dcb.fOutxCtsFlow = 1;
+    }
     SetCommState(hComm, &dcb);
     
-    // debug
-    printf("ByteSize:%d   Parity:%d    Stop:%d   Baud:%d\n", dcb.ByteSize,
-        dcb.Parity, dcb.StopBits, dcb.BaudRate);
-
     // Get comm timeouts
     COMMTIMEOUTS cto;
     if (GetCommTimeouts(hComm, &cto) == 0)
@@ -140,6 +156,24 @@ Transport::TransportError JSerial::configureLink()
 
     // Set receiver and local modes
     options.c_cflag |= (CLOCAL | CREAD);
+
+    // flow control (hardware or software)
+    if (software_dataflow)
+    {
+        // Configure for software flow control (XOn/XOff)
+        options.c_cflag &= ~CRTSCTS;
+        options.c_iflag |= (IXON | IXOFF | IXANY);
+    }
+    else
+    {
+        // Configure for hardware flow control (RTS-CTS)
+        options.c_cflag |= CRTSCTS;
+        options.c_iflag &= ~(IXON | IXOFF | IXANY);
+    }
+
+    // enable raw output (this prevent interpretation of
+    // the data stream for things line CR-LR
+    options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
 
     // Set the new options
     tcsetattr(hComm, TCSANOW, &options);
