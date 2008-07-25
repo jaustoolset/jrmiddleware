@@ -145,21 +145,17 @@ Transport::TransportError JSerial::configureLink()
     options.c_cflag |= CS8;
 
     // set the parity
-    options.c_iflag &= ~(INPCK | ISTRIP);
+    options.c_iflag &= ~(INPCK | ISTRIP | IGNPAR | PARMRK);
+    options.c_cflag &= ~(PARENB | PARODD);
     if (JrStrCaseCompare(parity, "odd"))
     {
-        //options.c_iflag |= (INPCK | ISTRIP);
+        options.c_iflag |= INPCK;
         options.c_cflag |= (PARENB | PARODD);
     }
     else if (JrStrCaseCompare(parity, "even"))
     {
-        //options.c_iflag |= (INPCK | ISTRIP);
+        options.c_iflag |= INPCK;
         options.c_cflag |= PARENB;
-    }
-    else
-    {
-        //options.c_iflag &= ~(INPCK | ISTRIP);
-        options.c_cflag &= ~(PARENB | PARODD);
     }
 
     // set the stop bits
