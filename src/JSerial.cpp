@@ -75,8 +75,9 @@ Transport::TransportError JSerial::configureLink()
     }
 
     // debug
-    printf("ByteSize:%d   Parity:%s    Stop:%d   Baud:%d\n", 8,
-        parity.c_str(), stopbits, baudrate);
+    printf("ByteSize:%d   Parity:%s    Stop:%d   Baud:%d  FlowControl:%s\n", 8,
+        parity.c_str(), stopbits, baudrate,
+        software_dataflow ? "software" : "hardware");
 
 
 #ifdef WINDOWS
@@ -146,9 +147,15 @@ Transport::TransportError JSerial::configureLink()
     // set the parity
     options.c_cflag &= ~(PARENB | PARODD);
     if (JrStrCaseCompare(parity, "odd"))
+    {
+        options.c_iflag |= (INPCK | ISTRIP);
         options.c_cflag |= (PARENB | PARODD);
+    }
     else if (JrStrCaseCompare(parity, "even"))
+    {
+        options.c_iflag |= (INPCK | ISTRIP);
         options.c_cflag |= PARENB;
+    }
 
     // set the stop bits
     options.c_cflag &= ~CSTOPB;
@@ -174,6 +181,7 @@ Transport::TransportError JSerial::configureLink()
     // enable raw output (this prevent interpretation of
     // the data stream for things line CR-LR
     options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+    options.c_oflag &= ~OPOST; 
 
     // Set the new options
     tcsetattr(hComm, TCSANOW, &options);
@@ -322,7 +330,7 @@ Transport::TransportError JSerial::recvMsg(MessageList& msglist)
 
     // Nothing to do if we didn't read any bytes
     if (bytesRead <= 0) return NoMessages;
-    //printf("read %ld bytes\n", bytesRead);
+    printf("read %ld bytes\n", bytesRead);
 
     // We need to process the incoming stream byte-wise, since the 
     // stream may contain DLE-marked instructions.
