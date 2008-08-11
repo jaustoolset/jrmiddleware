@@ -268,7 +268,7 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
         flags &= 0xFFFFFFFE;
         if (size > MaxMsgSize)
         {
-            printf("Broadcast of buffers larger than 4079 bytes is not supported\n");
+            JrError << "Broadcast of buffers larger than 4079 bytes is not supported\n";
             return Overflow;
         }
     }
@@ -440,7 +440,8 @@ JrErrorCode JuniorMgr::recvfrom(unsigned long* sender,
             JrErrorCode ret = Ok;
             if (*bufsize < data_size)
             {
-                printf("RECV: Buffer too small (buf=%ld, data=%ld)\n", bufsize, data_size);
+                JrError << "Receive buffer too small (buffer size: " << bufsize <<
+                    ", data size: " << data_size << std::endl; 
                 ret = Overflow;
             }
             else
@@ -515,14 +516,31 @@ JrErrorCode JuniorMgr::recvfrom( unsigned int* size, char* buffer )
 
 JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
 {
+    // Parse the config file & read logger settings
+    ConfigData config;
+    config.parseFile(config_file);
+    std::string logfile;
+    config.getValue("LogFileName", logfile);
+    unsigned char debug_level = 0;
+    config.getValue("LogMsgLevel", debug_level);
+
+    // Now set-up the data logger
+    if (debug_level > (int) Logger::full) debug_level = (int) Logger::full;
+    Logger::get()->setMsgLevel((enum Logger::LogMsgType) debug_level);
+    if (!logfile.empty()) Logger::get()->openOutputFile(logfile);
+
     // Check for degenerate value
-    if (id == 0) return InvalidID;
+    if (id == 0) 
+    {
+        JrError << "Cannot connect clients with id = 0\n";
+        return InvalidID;
+    }
 
     // Make sure the ID doesn't contain any wildcards.
     JAUS_ID jausId(id);
     if (jausId.containsWildcards())
     {
-        printf("Client ID may not contain wildcards (0xFF).  Returning error...\n");
+        JrError << "Client ID may not contain wildcards (0xFF).  Returning error...\n";
         return InvalidID;
     }
 
@@ -531,10 +549,6 @@ JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
     JrSpawnProcess("JuniorRTE", config_file);
     JrSleep(2000);
 
-    // Parse the config file
-    ConfigData config;
-    config.parseFile(config_file);
-
     // The name of our local socket is the string form of our ID.
     std::stringstream name; name << id;
 
@@ -542,7 +556,7 @@ JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
     JrSocket* mySocket = new JrSocket(name.str());
     if (mySocket->initialize(config_file) != Transport::Ok)
     {
-        printf("Failed to open a local socket.  Returning error...\n");
+        JrError << "Failed to open a local socket.  Returning error...\n";
         delete mySocket;
         return InitFailed;
     }
@@ -557,7 +571,7 @@ JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
     msg.setDestinationId(0);
     msg.setMessageCode(Connect);
     mySocket->sendMsg(msg);
-    printf("API: Sending connection request to RTE...\n");
+    JrInfo << "Sending client connection request to Junior Run-Time Engine...\n";
 
     // Wait for a connection accept message
     MessageList msglist;
@@ -569,6 +583,7 @@ JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
         {
             // timeout.
             delete mySocket;
+            JrError << "Timeout waiting for response from Run-Time Engine.\n";
             return Timeout;
         }
 
@@ -584,7 +599,7 @@ JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
             if (response->getSourceId().val == 0)
             {
                 connected = true;
-                printf("API: Connection to RTE accepted and open...\n");
+                JrInfo << "Client connection to RTE accepted and open...\n";
             }
             delete response;
         }

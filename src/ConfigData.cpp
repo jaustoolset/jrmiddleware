@@ -10,6 +10,7 @@
  ************************************************************************
  */
 #include "ConfigData.h"
+#include "JrLogger.h"
 
 using namespace DeVivo::Junior;
 
@@ -22,7 +23,7 @@ ConfigData::ConfigError ConfigData::parseFile( std::string filename )
     instream.open( filename.c_str() );
     if (instream.fail())
     {
-        printf("Cannot open configuration file: %s\n", filename.c_str());
+        JrWarn << "Cannot open configuration file: " << filename << std::endl;
         return InvalidFile;
     }
 
@@ -51,7 +52,7 @@ ConfigData::ConfigError ConfigData::parseLine( std::string line )
     // Make sure it's a valid name=value pair
     if (line.find("=") == std::string::npos)
     {
-        printf("Cannot parse config file.  Line: %s (%ld)\n", line.c_str(), line.size());
+        JrWarn << "Cannot parse config file.  Line: " << line << std::endl;
         return InvalidFile;
     }
 
@@ -72,6 +73,21 @@ void ConfigData::deleteWhitespace(std::string& in)
     if (in.empty()) return;
     in = in.substr(in.find_first_not_of(" "), in.find_last_not_of(" ")+1);
 }
+
+// 
+// Function to get a list of keys from the map
+//
+void ConfigData::getKeyList(StringList& list)
+{
+    // clear the list
+    list.clear();
+
+    // Loop through the map, pulling each key
+    std::map<std::string, std::string>::iterator iter;
+    for (iter = _map.begin(); iter != _map.end(); iter++)
+        list.push_back(iter->first);
+}
+
     
 
 

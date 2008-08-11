@@ -11,6 +11,7 @@
  */
 #include "JrSockets.h"
 #include "ConfigData.h"
+#include "JrLogger.h"
 #include <fcntl.h>
 #include <errno.h>
 #include <sstream>
@@ -261,7 +262,7 @@ Transport::TransportError JrSocket::initialize(std::string config_file)
     sock = CreateMailslot(s.str().c_str(), 0, 0, NULL); 
     if (sock == INVALID_HANDLE_VALUE)
     {
-        printf("Internal error.  Cannot initialize mailslot for IPC comms\n");
+        JrError << "Internal error.  Cannot initialize mailslot for IPC comms\n";
         return Failed;
     }
 #else
@@ -281,7 +282,8 @@ Transport::TransportError JrSocket::initialize(std::string config_file)
     if (bind(sock, (struct sockaddr *)&addr, len) != 0)
     {
 
-        printf("Bind failed for local socket(%s).  err=%d\n", s.str().c_str(), errno);
+        JrError << "Bind failed for local socket (" << s.str() << ").  errno=" <<
+            errno << std::endl;
         return InitFailed;
     }
 

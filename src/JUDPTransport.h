@@ -15,33 +15,12 @@
 #include "Transport.h"
 #include "TransportArchive.h"
 #include "HeaderCompression.h"
-#include "AddressMap.h"
+#include "IpAddressBook.h"
+#include <sstream>
 
 namespace DeVivo {
 namespace Junior {
 
-// Define a helper class
-class IP_ADDRESS
-{
-  public:
-    IP_ADDRESS():addr(0), port(0){};
-    IP_ADDRESS(struct sockaddr_in in) :
-                   addr(in.sin_addr.s_addr),port(in.sin_port){};
-    ~IP_ADDRESS(){};
-
-   bool operator==(IP_ADDRESS in)
-   {
-       if ((addr == in.addr) && (port == in.port)) return true;
-       return false;
-   }
-   void print()
-   {
-       printf("%s:%ld", inet_ntoa(*(in_addr*) &addr), ntohs(port));
-   }
-    
-   unsigned long addr;
-   unsigned short port;
-};
 
 class JUDPTransport : public Transport
 {
@@ -57,7 +36,7 @@ public:
 
 protected:
 
-    AddressMap<IP_ADDRESS>   _map;
+    IpAddressBook            _map;
     int                      _socket;
     HeaderCompressionTable   _inTable, _outTable;
     IP_ADDRESS               _multicastAddr;

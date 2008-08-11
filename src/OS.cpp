@@ -10,6 +10,7 @@
  ************************************************************************
  */
 #include "OS.h"
+#include "JrLogger.h"
 
 using namespace DeVivo::Junior;
 
@@ -36,7 +37,7 @@ void DeVivo::Junior::JrSpawnProcess(std::string path, std::string arg)
 
     if (ret != 0)
     {
-        printf("Trying to CreateProcess(%s)\n", path.c_str());
+        JrInfo << "Trying to CreateProcess " << path << std::endl;
         STARTUPINFO si;
         PROCESS_INFORMATION pi;
         memset(&si, 0, sizeof(STARTUPINFO)); si.cb = sizeof(si);
@@ -50,7 +51,8 @@ void DeVivo::Junior::JrSpawnProcess(std::string path, std::string arg)
         sprintf(cmd, "%s %s\0", path.c_str(), arg.c_str());
         BOOL result = CreateProcess(  NULL, LPSTR(cmd), NULL, NULL, FALSE, 
             HIGH_PRIORITY_CLASS | CREATE_NEW_PROCESS_GROUP, NULL,  NULL,  &si, &pi);
-        if(result == 0)  printf("Could not create process (%s)\n", path.c_str());
+        if(result == 0)  
+            JrError << "Could not create process " << path << std::endl;
     }
 
 #else
@@ -63,7 +65,7 @@ void DeVivo::Junior::JrSpawnProcess(std::string path, std::string arg)
     if (ret != 0)
     {
         // No JuniorRTE found.  Start a new process...
-        printf("Starting Junior Run-Time Engine...\n");
+        JrInfo << "Starting Junior Run-Time Engine...\n";
         if (fork()==0)
            execl(path.c_str(), path.c_str(), arg.c_str(), NULL);
     }
@@ -136,6 +138,16 @@ bool DeVivo::Junior::JrStrCaseCompare(std::string str1, std::string str2)
 #else
     if (str1.size() != str2.size()) return false;
     return ((bool)(!strncasecmp(str1.c_str(), str2.c_str(), str1.size())));
+#endif
+}
+
+void DeVivo::Junior::JrSpawnThread(void*(*func_ptr)(void*), void* func_arg)
+{
+#ifdef WINDOWS
+    CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) func_ptr, func_arg, 0, NULL);
+#else
+    pthread_t thread_info;
+    pthread_create(&thread_info, NULL, func_ptr, func_arg);
 #endif
 }
 

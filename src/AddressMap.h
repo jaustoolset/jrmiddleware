@@ -13,6 +13,7 @@
 #define __ADDRESS_MAP_H
 
 #include <vector>
+#include "JrLogger.h"
 
 namespace DeVivo {
 namespace Junior {
@@ -56,6 +57,7 @@ inline bool AddressMap<S>::addAddress(JAUS_ID id, S addr)
     }
 
     // Add this pair to the end of the vector
+    JrFull << "Adding address book entry for id " << id.val << std::endl;
     _list.push_back(std::make_pair(id, addr));
     return true;
 }

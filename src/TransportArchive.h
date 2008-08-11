@@ -15,6 +15,7 @@
 
 #include "Archive.h"
 #include "ChecksumCRC.h"
+#include "JrLogger.h"
 
 namespace DeVivo {
 namespace Junior {
@@ -98,7 +99,6 @@ class JUDPArchive : public TransportArchive
     void setHCNumber( unsigned char num )  { data[1] = num; }
     unsigned char getHeaderLength() {return 1;}
     char* getJausMsgPtr( ) { return &data[5]; }
-    void  setJausMsgData() { }
 
     void removeHeadMsg()
     {
@@ -279,7 +279,7 @@ class JSerialArchive : public TransportArchive
         // Verify the packets version
         if ((data[2] & 0XF0) != 0x10)
         {
-            //printf("Invalid version\n");
+            JrDebug << "Invalid serial packet (invalid version)\n";
             return false;
         }
 
@@ -287,7 +287,7 @@ class JSerialArchive : public TransportArchive
         char addressSize = usesExplicitAddress() ? 2 : 0;
         if (!usesExplicitAddress() && !usesImplicitAddress())
         {
-            //printf("No DLE-STX found\n");
+            JrDebug << "Invalid serial packet (no STX delineator)\n";
             return false;
         }
 
@@ -296,7 +296,8 @@ class JSerialArchive : public TransportArchive
         getValueAt(3, packetLength);
         if (packetLength != (getArchiveLength() - 13 - addressSize))
         {
-            //printf("invalid packet length: %ld versus %ld\n", packetLength, getArchiveLength());
+            JrDebug << "Invalid serial packet (invalid size: " << packetLength <<
+                " versus " << getArchiveLength() << ")\n";
             return false;
         }
 
@@ -304,8 +305,7 @@ class JSerialArchive : public TransportArchive
         if (( data[data_length-4] != 0x10 ) ||
             ( data[data_length-3] != 0x03) )
         {
-            //printf("didn't find etx: 0x%x%x\n", 
-            //    data[data_length-4], data[data_length-3]);
+            JrDebug << "Invalid serial packet (no etx found)\n";
             return false;
         }
 
@@ -317,8 +317,8 @@ class JSerialArchive : public TransportArchive
                 (unsigned char*)&data[2], 0xFFFF, 4+addressSize);
         if (header_checksum != local_header_checksum)
         {
-            //printf("Header checksum mismatch (%d versus %d)\n",
-            //                header_checksum, local_header_checksum);
+            JrError << "Serial header checksum mismatch (" << header_checksum <<
+                " versus " << local_header_checksum << ")\n";
             return false;
         }
 
@@ -330,13 +330,12 @@ class JSerialArchive : public TransportArchive
                 local_header_checksum, getArchiveLength()-4-7-addressSize);
         if (packet_checksum != local_packet_checksum)
         {
-            //printf("Packet checksum mismatch (%d versus %d)\n",
-            //                packet_checksum, local_packet_checksum);
-            return false;
+            JrError << "Serial packet checksum mismatch (" << packet_checksum <<
+                " versus " << local_packet_checksum << ")\n";
         }
 
         // getting to this point means we have a valid packet
-        //printf("Found valid archive\n");
+        JrDebug << "Found valid serial packet\n";
         return true;
     }
     void finalizePacket()
@@ -397,6 +396,82 @@ class JSerialArchive : public TransportArchive
         }
     }
 };
+
+
+//
+// Define a child class for handling JTCP archives.  The header
+// includes only version and data size.
+//
+class JTCPArchive : public TransportArchive
+{
+  public:
+    JTCPArchive() : TransportArchive()
+    {
+        reset();
+    }
+    ~JTCPArchive(){}
+
+    void getMsgLength( unsigned short& length ) 
+    {
+        getValueAt(1, length); 
+        length = ntohs(length);
+    }
+    void setMsgLength( unsigned short length )
+    {
+        unsigned short temp = htons( length );
+       *((unsigned short*) &data[1]) = temp;
+    }
+    unsigned char getHeaderLength() {return 1;}
+    char* getJausMsgPtr( ) { return &data[3]; }
+
+    void removeHeadMsg()
+    {
+        // Remove the first message in the archive.
+        unsigned short length;
+        getMsgLength(length);
+        if (length > (getArchiveLength() - 3))
+            length = getArchiveLength() - 3;
+        removeAt(0, 3+length);
+    }
+    void reset()
+    {
+        // reset the packet details,
+        // reserving space for packet length
+        growBuffer(3);
+        memset(data, 0, data_length);
+        data[0] = 1;
+        data_length = 3;
+    }
+    bool isArchiveValid()
+    {
+        // Make sure we have enough bytes to bother reading
+        if (getArchiveLength() < 3)
+            return false;
+
+        // Verify the packets version
+        if (data[0] != 1)
+        {
+            JrDebug << "Invalid TCP packet (invalid version)\n";
+            return false;
+        }
+
+        // Verify that the packet meets or exceeds the message length
+        unsigned short messageLength = 0;
+        getMsgLength(messageLength);
+        if (messageLength >  (getArchiveLength() - 3))
+        {
+            JrDebug << "Invalid TCP packet (invalid size: " << messageLength <<
+                " versus " << getArchiveLength() << ")\n";
+            return false;
+        }
+
+        // getting to this point means we have a valid packet
+        JrDebug << "Found valid TCP packet\n";
+        return true;
+    }
+};
+
+
 
 }} // namespace DeVivo::Junior
 

@@ -27,6 +27,7 @@
     #include <strings.h>
     #include <errno.h>
     #include <termios.h>
+    #include <pthread.h>
 #ifndef __CYGWIN__
     #include <ifaddrs.h>
 #endif
@@ -37,6 +38,7 @@ namespace Junior {
 
 void JrSleep(unsigned long milliseconds);
 void JrSpawnProcess(std::string path, std::string arg);
+void JrSpawnThread(void*(*func_ptr)(void*), void* func_arg);
 unsigned long JrGetTimestamp();
 std::list<unsigned long> JrGetIPAddresses();
 bool JrStrCaseCompare(std::string str1, std::string str2);

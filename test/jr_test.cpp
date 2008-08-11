@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
     char buffer[MaxBufferSize];
     int counter = 0;         
     unsigned long sender;
-    unsigned int datasize;
+    unsigned int datasize = size;
     int prevMsg  =0;
 
     // Randomize
@@ -105,9 +105,7 @@ int main(int argc, char* argv[])
     {
         // Create a random message size (unless command line arguments
         // indicate something else
-        if (size != 0)
-            datasize = size;        
-        else
+        if (size == 0)
         {
             do
             {
@@ -133,7 +131,7 @@ int main(int argc, char* argv[])
         }
 
         // check for incoming messages
-        for (int i=0; i<5000; i++)
+        for (int i=0; i<5000, !exit_flag; i++)
         {
             unsigned int buffersize = MaxBufferSize; msg_id = 0; int flags = 0;
             JrErrorCode ret = JrReceive(handle, &sender, &msg_id, &buffersize, buffer, NULL, &flags);

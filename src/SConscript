@@ -20,8 +20,10 @@ API_Files = [
     'OS.cpp',
     'ConfigData.cpp',
     'JUDPTransport.cpp',
+    'JTCPTransport.cpp',
     'JSerial.cpp',
-    'ChecksumCRC.cpp'
+    'ChecksumCRC.cpp',
+    'JrLogger.cpp'
 ]
 
 # Define multiple environments for building and using

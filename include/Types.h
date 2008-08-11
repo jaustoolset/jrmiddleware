@@ -14,6 +14,8 @@
 
 #include <string>
 #include <list>
+#include <sstream>
+#include "OS.h"
 
 namespace DeVivo {
 namespace Junior {
@@ -32,6 +34,10 @@ class JAUS_ID
   public:
     JAUS_ID(){val=0;};
     JAUS_ID(unsigned long in){val=in;}
+    JAUS_ID(std::string str)
+    {
+        std::stringstream ss; ss << str; ss >> val;
+    }
     ~JAUS_ID(){}
 
     unsigned long val;
@@ -72,6 +78,45 @@ class JAUS_ID
         return false;
     }
 };
+
+// Define a helper class for IP address (with port)
+class IP_ADDRESS
+{
+  public:
+    IP_ADDRESS():addr(0), port(0){};
+    IP_ADDRESS(struct sockaddr_in in) :
+                   addr(in.sin_addr.s_addr),port(in.sin_port){};
+    ~IP_ADDRESS(){};
+
+   bool operator==(IP_ADDRESS in)
+   {
+       if ((addr == in.addr) && (port == in.port)) return true;
+       return false;
+   }
+   std::string toString()
+   {
+       std::stringstream ss;
+       ss << inet_ntoa(*(in_addr*) &addr) << ":" << port;
+       return ss.str();
+   }
+   bool fromString(std::string str)
+   {
+       // extract substrings for address and port (assume the
+       // incoming line is of the form "dot-notation-address:port"
+       std::string ip_addr_str = str.substr(0, str.find_first_of(":"));
+       std::string port_str = str.substr(str.find_first_of(":")+1);
+       if (ip_addr_str.empty() || port_str.empty()) return false;
+
+       // populate the data members
+       addr = inet_addr(ip_addr_str.c_str());
+       port = (unsigned short) (strtod(port_str.c_str(), NULL));
+       return true;
+   }
+    
+   unsigned long addr;
+   unsigned short port;
+};
+
 }} // namespace DeVivo::Junior
 #endif
 

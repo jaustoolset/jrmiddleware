@@ -14,6 +14,7 @@
 #include "Message.h"
 #include "ConfigData.h"
 #include "OS.h"
+#include "JrLogger.h"
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -50,15 +51,6 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     ConfigData config;
     config.parseFile(filename);
 
-    // Check to see if UDP has been switched off.  By default, it's on.
-    char use_udp = 1;
-    config.getValue("EnableUDPInterface", use_udp);
-    if (!use_udp)
-    {
-        printf("UDP communication deactivated in configuration file\n");
-        return InitFailed;
-    }
-
     // Read the configuration file, and set-up defaults for anything
     // that isn't specified.
     unsigned short port = 3794;
@@ -70,6 +62,8 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     int buffer_size = 10000;
     config.getValue("MaxBufferSize", buffer_size);
     config.getValue("UseOPC2.75_Header", _use_opc);
+    std::string address_book;
+    config.getValue("UDP_AddressBook", address_book);
 
     // Set-up the multicast address based on config data
     _multicastAddr.port = port;
@@ -85,7 +79,8 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     _socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (_socket < 0)
     {
-        //printf("Unable to create socket for UDP communication.\n");
+        JrError << "Unable to create socket for UDP communication.  Error: " 
+            << getSocketError << std::endl;
         return InitFailed;
     }
 
@@ -96,7 +91,7 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     sockAddr.sin_port = htons(port);
     if (bind(_socket,(struct sockaddr*)&sockAddr,sizeof(sockAddr))<0)
     {
-        //printf("Unable to bind to port %ld.  Returning failed.\n", port);
+        JrError << "Unable to bind to UDP port " << port << std::endl;
         closesocket(_socket);
         _socket = 0;
         return InitFailed;
@@ -134,6 +129,10 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
         setsockopt (_socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, 
             (const char*) &mreq, sizeof(mreq));
     }
+
+    // UDP sockets support run-time discovery.  It's also possible, however,
+    // to initialize the map statically through a config file.
+    _map.loadFromFile(address_book);
 
     return Ok;
 }
@@ -198,8 +197,16 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
             // Lastly, send the message.  
             int val =sendto(_socket, payload->getArchive(), payload->getArchiveLength(),
                        0, (struct sockaddr*) &dest, sizeof(dest));
-            if (val < 0) result = Failed;
-            else result = Ok;
+            if (val < 0) 
+            {
+                JrError << "Unable to send UDP packet.  Error: " << getSocketError << std::endl;
+                result = Failed;
+            }
+            else 
+            {
+                JrDebug << "Sent " << payload->getArchiveLength() << "bytes on UDP port\n";
+                result = Ok;
+            }
         }
     }
 
@@ -236,6 +243,7 @@ Transport::TransportError JUDPTransport::recvMsg(MessageList& msglist)
                               (struct sockaddr*) &source, 
                               (socklen_t*) &source_length);
         if (result <= 0) break;
+        JrDebug << "Read " << source_length << " bytes on UDP port\n";
 
         // 
         // Pull off the source IP info for convenience.  Look-up the corresponding
@@ -256,8 +264,13 @@ Transport::TransportError JUDPTransport::recvMsg(MessageList& msglist)
             raw_msg = new OPCArchive; 
 
         // Check for unknown message types.  Silently discard.
+        if (raw_msg == NULL)
+        {
+            JrWarn << "Received unknown version on UDP port.  Discarding\n";
+            continue;
+        }
+
         // Otherwise, set the data from the receive buffer.
-        if (raw_msg == NULL) continue;
         raw_msg->setData( buffer, result );
 
         // A single packet may have multiple JAUS messages on it, each
@@ -272,6 +285,7 @@ Transport::TransportError JUDPTransport::recvMsg(MessageList& msglist)
             {
                 // Remove this message from the JUDP archive, so
                 // we can process the next message in the packet.
+                JrWarn << "Failed to uncompress UDP packet.  Discarding\n";
                 raw_msg->removeHeadMsg( );
                 continue;
             }
@@ -295,6 +309,7 @@ Transport::TransportError JUDPTransport::recvMsg(MessageList& msglist)
                 _map.addAddress( msg->getSourceId(), sourceAddr );
 
                 // Add the message to the list and change the return value
+                JrDebug << "Found valid UDP message (size " << jausMsgLength << ")\n";
                 msglist.push_back(msg);
                 ret = Ok;
             }
@@ -418,7 +433,18 @@ Transport::TransportError JUDPTransport::broadcastMsg(Message& msg)
     {
         if (sendto(_socket, payload->getArchive(), payload->getArchiveLength(),
                    0, (struct sockaddr*) &dest, sizeof(dest)) < 0 )
+        {
+            JrError << "Failed to broadcast UDP message to " <<
+                inet_ntoa( *(struct in_addr*) &dest.sin_addr.s_addr ) << 
+                ".  Error: " << getSocketError << std::endl;
             ret = Failed;
+        }
+        else
+        {
+            JrDebug << "Broadcasted " << payload->getArchiveLength() <<
+                " bytes to " << inet_ntoa( *(struct in_addr*) &dest.sin_addr.s_addr ) 
+                << std::endl;
+        }
     }
     // Otherwise, send on all available interfaces
     else
@@ -432,8 +458,20 @@ Transport::TransportError JUDPTransport::broadcastMsg(Message& msg)
                 (const char*) &sockAddr, sizeof(sockAddr));
 
             // Lastly, send the message.
-            sendto(_socket, payload->getArchive(), payload->getArchiveLength(),
-                       0, (struct sockaddr*) &dest, sizeof(dest));
+            if (sendto(_socket, payload->getArchive(), payload->getArchiveLength(),
+                       0, (struct sockaddr*) &dest, sizeof(dest)) < 0)
+            {
+                JrError << "Failed to broadcast UDP message on interface " <<
+                    inet_ntoa( *(struct in_addr*) &sockAddr.s_addr ) <<
+                    ".  Error: " << getSocketError << std::endl;
+                ret = Failed;
+            }
+            else
+            {
+                JrDebug << "Broadcasted " << payload->getArchiveLength() <<
+                    " bytes on interface " << inet_ntoa( *(struct in_addr*) &sockAddr.s_addr ) 
+                    << std::endl;
+            }
         }
     }
 

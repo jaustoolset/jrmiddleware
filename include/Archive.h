@@ -18,6 +18,7 @@
 #include <math.h>
 #include "Types.h"
 #include "OS.h"
+#include "JrLogger.h"
 
 namespace DeVivo {
 namespace Junior {
@@ -222,12 +223,14 @@ protected:
 
 inline void Archive::printArchive(int size)
 {
-    std::cout << "Archive length: " << data_length << std::endl;
-    std::cout << "Archive: ";
+    // get the stream from the logger
+    ostream& out = Logger::get()->getStream(Logger::full);
+    JrFull << "Archive length: " << data_length << std::endl;
+    JrFull << "Archive: ";
     int max_print = (size > data_length) ? data_length : size;
     for (int i=0; i < max_print; i++)
-        printf(" %x", (char) *(data+i));
-    printf("\n");
+        out << " %x" << (char) *(data+i);
+    out << std::endl;
 }
 
 inline void Archive::setData( const char* buffer, unsigned short length )

@@ -16,10 +16,12 @@
 #include "ConfigData.h"
 #include "JrSockets.h"
 #include "JUDPTransport.h"
+#include "JTCPTransport.h"
 #include "JSerial.h"
 #include "Transport.h"
 #include "Types.h"
 #include "OS.h"
+#include "JrLogger.h"
 
 using namespace DeVivo::Junior;
 
@@ -37,34 +39,50 @@ static void handle_exit_signal( int signum )
 // Main loop
 int main(int argc, char* argv[])
 {
-    printf("Hello, and welcome to the JuniorRTE\n");
+    // Pull the config file from the command line arguments
+    std::string config_file = "";
+    if (argc >= 2) config_file = std::string(argv[1]);
+
+    // This is the main entry point for hte Junior Run-Time engine.
+    // First thing we need to do is initialize the log, but we can't
+    // do that until we read in the log file name from the configuration
+    // file.  So we start with opening and parsing the config file...
+    ConfigData config;
+    config.parseFile(config_file);
+    std::string logfile;
+    config.getValue("LogFileName", logfile);
+    unsigned char debug_level = 0;
+    config.getValue("LogMsgLevel", debug_level);
+    unsigned char allowRelay = 1;
+    config.getValue("AllowRelay", allowRelay);
+    unsigned char delay = 1;
+    config.getValue("RTE_CycleTime", delay);
+    char use_udp = 1;
+    config.getValue("EnableUDPInterface", use_udp);
+    char use_tcp = 0;
+    config.getValue("EnableTCPInterface", use_tcp);
+    char use_serial = 0;
+    config.getValue("EnableSerialInterface", use_serial);
+
+    // Now set-up the data logger
+    if (debug_level > (int) Logger::full) debug_level = (int) Logger::full;
+    Logger::get()->setMsgLevel((enum Logger::LogMsgType) debug_level);
+    if (!logfile.empty()) Logger::get()->openOutputFile(logfile);
+
+    // We can finally output some proof-of-life info
+    JrInfo << "Hello, and welcome to the JuniorRTE" << std::endl;
+    JrInfo << "Using config file: " << config_file << std::endl;
 
     // For linux, we need to break from the parent's signals
 #ifndef WINDOWS
     setsid();
 #endif
 
-    // Pull the config file from the command line arguments
-    std::string config_file = "";
-    if (argc >= 2)
-    {
-        printf("Using config file: %s\n", argv[1]);
-        config_file = std::string(argv[1]);
-    }
-
-    // Parse the config file, looking for our settings
-    ConfigData config;
-    config.parseFile(config_file);
-    unsigned char _allowRelay = 1;
-    config.getValue("AllowRelay", _allowRelay);
-    unsigned char _delay = 1;
-    config.getValue("RTE_CycleTime", _delay);
-
     // Create the public socket that allows APIs to find us.
     JrSocket publicSocket(std::string("JuniorRTE"));
     if (publicSocket.initialize(config_file) != Transport::Ok)
     {
-        printf("Unable to initialize internal socket.  Exiting with error...\n");
+        JrError << "Unable to initialize internal socket.  Exiting ...\n";
         exit(1);
     }
 
@@ -84,23 +102,58 @@ int main(int argc, char* argv[])
     std::list<Transport*>::iterator _iter;
     _transports.push_back(&publicSocket);
 
-    // Add UDP
+    // Create the transports, but don't initialize them unless requested.
     JUDPTransport udp;
-    if (udp.initialize(config_file) != Transport::Ok)
-    {
-        printf("Unable to initialize UDP communications.\n");
-    }
-    else
-        _transports.push_back(&udp);
-
-    // Add Serial
+    JTCPTransport tcp;
     JSerial serial;
-    if (serial.initialize(config_file) != Transport::Ok)
+
+    // Add UDP, if selected
+    if (use_udp)
     {
-        printf("Unable to initialize serial communications.\n");
+        if (udp.initialize(config_file) != Transport::Ok)
+        {
+            JrInfo << "Unable to initialize UDP communications.\n";
+        }
+        else
+            _transports.push_back(&udp);
     }
     else
-        _transports.push_back(&serial);
+    {
+        JrInfo << "UDP communication deactivated in configuration file\n";
+    }
+
+    // Add TCP, if selected
+    if (use_tcp)
+    {
+
+        if (tcp.initialize(config_file) != Transport::Ok)
+        {
+            JrInfo << "Unable to initialize TCP communications.\n";
+        }
+        else
+            _transports.push_back(&tcp);
+    }
+    else
+    {
+        JrInfo << "TCP communication deactivated in configuration file\n";
+    }
+
+    // Add Serial, if selected
+    if (use_serial)
+    {
+
+        if (serial.initialize(config_file) != Transport::Ok)
+        {
+            JrInfo << "Unable to initialize serial communications.\n";
+        }
+        else
+            _transports.push_back(&serial);
+    }
+    else
+    {
+        JrInfo << "Serial communication deactivated in configuration file\n";
+    }
+
 
     // Predefine a list of messages we receive from the transports.
     MessageList msglist;
@@ -109,8 +162,8 @@ int main(int argc, char* argv[])
     // Process messages.
     while(!exit_flag)
     {
-        // Wait 1 millisecond so we don't hog the CPU
-        JrSleep(_delay);
+        // Wait a bit so we don't hog the CPU
+        JrSleep(delay);
 
         // Check the public socket for outgoing requests
         publicSocket.recvMsg(msglist);
@@ -156,7 +209,12 @@ int main(int argc, char* argv[])
                     // If we don't have an entry in our address book, broadcast this message.
                     // First set the ack/nak bit, though, so that if we do find the endpoint
                     // we can learn its address.
-                    if (!matchFound) msg->setAckNakFlag(1);
+                    if (!matchFound) 
+                    {
+                        JrInfo << "Destination id (" << msg->getDestinationId().val <<
+                            ") unknown.  Switching to broadcast.\n";
+                        msg->setAckNakFlag(1);
+                    }
                 }
 
                 // If the destination contains wildcards, or we didn't find
@@ -165,10 +223,7 @@ int main(int argc, char* argv[])
                 {
                     // Send this message to all recipients on all transports.
                     for (_iter = _transports.begin(); _iter != _transports.end(); ++_iter)
-                    {
-                        //printf("broadcasting message\n");
                         (*_iter)->broadcastMsg(*msg);
-                    }
                 }
             }
 
@@ -190,7 +245,7 @@ int main(int argc, char* argv[])
 
                 // If relay is off, or this message is intended for a local client (and a 
                 // local client only), send it only on the socket interface.
-                if (!_allowRelay || 
+                if (!allowRelay || 
                     (std::find(_clients.begin(), _clients.end(), msg->getDestinationId().val) !=
                     _clients.end()))
                 {
@@ -213,5 +268,5 @@ int main(int argc, char* argv[])
     }
 
     // Received termination signal
-    printf("Shutting down Junior RTE...\n");
+    JrInfo << "Shutting down Junior RTE...\n";
 }

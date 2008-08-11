@@ -13,6 +13,7 @@
 #include "JSerial.h"
 #include "Message.h"
 #include "OS.h"
+#include "JrLogger.h"
 #include <fcntl.h>
 
 using namespace DeVivo::Junior;
@@ -65,19 +66,19 @@ Transport::TransportError JSerial::configureLink()
          !JrStrCaseCompare(parity, "even") &&
          !JrStrCaseCompare(parity, "none") )
     {
-        printf("Invalid serial parity in config file.  Using <none>\n");
+        JrWarn << "Invalid serial parity in config file.  Using <none>\n";
         parity = "none";
     }
     if ((stopbits != 1) && (stopbits != 2))
     {
-        printf("Invalid serial stop bits.  Using 1\n");
+        JrWarn << "Invalid serial stop bits.  Using 1\n";
         stopbits = 1;
     }
 
     // debug
-    printf("ByteSize:%d   Parity:%s    Stop:%d   Baud:%d  FlowControl:%s\n", 8,
-        parity.c_str(), stopbits, baudrate,
-        software_dataflow ? "software" : "hardware");
+    JrDebug << "Serial configuration: ByteSize: 8  Parity: " << parity <<
+        "   Stop: " << stopbits << "   Baud: " << baudrate << "   FlowControl: " <<
+        (software_dataflow ? "software" : "hardware") << std::endl;
 
 
 #ifdef WINDOWS
@@ -118,7 +119,7 @@ Transport::TransportError JSerial::configureLink()
     COMMTIMEOUTS cto;
     if (GetCommTimeouts(hComm, &cto) == 0)
     {
-        printf("Failed to configure serial port (error=%ld)\n", getlasterror);
+        JrError << "Failed to configure serial port.  Error: " << getlasterror << std::endl;
         return InitFailed;
     }
 
@@ -200,20 +201,11 @@ Transport::TransportError JSerial::initialize( std::string filename )
     // Parse the config file
     _config.parseFile(filename);
 
-    // See if Serial has been deactivated.
-    char use_serial = 0;
-    _config.getValue("EnableSerialInterface", use_serial);
-    if (!use_serial)
-    {
-        printf("Serial communication deactivated in configuration file\n");
-        return InitFailed;
-    }
-
     // Pull the com port name
     std::string portname = "COM1";
     _config.getValue("SerialPortName", portname);
     portname = SERIAL_PATH + portname;
-    printf("Serial: Using port %s\n", portname.c_str());
+    JrInfo << "Serial: Using port " << portname << std::endl;
 
 #ifdef WINDOWS
     // Open a file for reading/writing to the port
@@ -227,7 +219,8 @@ Transport::TransportError JSerial::initialize( std::string filename )
     // Check for valid response
     if (hComm == INVALID_HANDLE_VALUE) 
     {
-        printf("Failed to open port %s (error=%ld)\n", portname.c_str(), getlasterror);
+        JrError << "Failed to open serial port " << portname <<
+            ".  Error: " << getlasterror << std::endl;
         hComm = 0;
         return InitFailed;
     }
@@ -286,7 +279,7 @@ Transport::TransportError JSerial::sendMsg(Message& msg, HANDLE handle)
                       &bytesWritten, NULL);
     if (ret == 0) 
     {
-        printf("Failed to Serial::Write\n");
+        JrError << "Failed to write to serial port.  Error: " << getlasterror << std::endl;
         result = Failed;
     }
 
@@ -300,12 +293,12 @@ Transport::TransportError JSerial::sendMsg(Message& msg, HANDLE handle)
     // make sure we wrote the whole packet
     if (bytesWritten != payload.getArchiveLength())
     {
-        printf("Failed to write full packet (%ld of %ld)\n", 
-            bytesWritten, payload.getArchiveLength());
+        JrError << "Failed to write full packet on serial port. Wrote " << 
+            bytesWritten << " of " << payload.getArchiveLength() << std::endl;
         result = Failed;
     }
-    //else
-    //    printf("Serial: Wrote %ld bytes\n", bytesWritten);
+    else
+        JrDebug << "Serial: Wrote " << bytesWritten << " bytes on serial port\n";
 
     return result;
 }
@@ -322,7 +315,7 @@ Transport::TransportError JSerial::recvMsg(MessageList& msglist)
     DWORD bytesRead;
     if (!ReadFile(hComm, buffer, 5000, &bytesRead, NULL))
     {
-        printf("Failed to read serial port (%ld)\n", getlasterror);
+        JrError << "Failed to read serial port.  Error:" <<  getlasterror << std::endl;
         return Failed;
     }
 #else
@@ -331,7 +324,7 @@ Transport::TransportError JSerial::recvMsg(MessageList& msglist)
 
     // Nothing to do if we didn't read any bytes
     if (bytesRead <= 0) return NoMessages;
-    //printf("read %ld bytes\n", bytesRead);
+    JrDebug << "Read " << bytesRead << " bytes from serial port.\n";
 
     // We need to process the incoming stream byte-wise, since the 
     // stream may contain DLE-marked instructions.
@@ -357,6 +350,12 @@ Transport::TransportError JSerial::recvMsg(MessageList& msglist)
                     // unused bytes contain a valid packet
                     if (unusedBytes.isArchiveValid())
                         ret = extractMsgsFromPacket(msglist);
+
+                    // Update the log if we're discarding 
+                    // a non-empty packet
+                    if (unusedBytes.getArchiveLength() > 0)
+                        JrWarn << "Received new serial packet delineator.  Discarding "
+                               << unusedBytes.getArchiveLength() << " unprocessed bytes\n";
 
                     // Now clear the unused bytes buffer
                     // so we can start the new packet.
@@ -433,6 +432,7 @@ Transport::TransportError JSerial::extractMsgsFromPacket(MessageList& msglist)
             _map.addAddress( msg->getSourceId(), hComm );
 
             // Add the message to the list and change the return value
+            JrDebug << "Found valid serial message (size " << jausMsgLength << ")\n";
             msglist.push_back(msg);
             ret = Ok;
         }
