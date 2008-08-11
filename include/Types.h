@@ -79,7 +79,10 @@ class JAUS_ID
     }
 };
 
-// Define a helper class for IP address (with port)
+//
+// Define a helper class for IP address (with port).
+// Note that this is stored internally in NETWORK BYTE ORDER.
+//
 class IP_ADDRESS
 {
   public:
@@ -96,7 +99,7 @@ class IP_ADDRESS
    std::string toString()
    {
        std::stringstream ss;
-       ss << inet_ntoa(*(in_addr*) &addr) << ":" << port;
+       ss << inet_ntoa(*(in_addr*) &addr) << ":" << ntohs(port);
        return ss.str();
    }
    bool fromString(std::string str)
@@ -109,7 +112,7 @@ class IP_ADDRESS
 
        // populate the data members
        addr = inet_addr(ip_addr_str.c_str());
-       port = (unsigned short) (strtod(port_str.c_str(), NULL));
+       port = htons((unsigned short)(strtod(port_str.c_str(), NULL)));
        return true;
    }
     

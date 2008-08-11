@@ -66,7 +66,7 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     config.getValue("UDP_AddressBook", address_book);
 
     // Set-up the multicast address based on config data
-    _multicastAddr.port = port;
+    _multicastAddr.port = htons(port);
     _multicastAddr.addr = inet_addr(multicast_addr.c_str());
 
 #ifdef WINDOWS
@@ -426,7 +426,7 @@ Transport::TransportError JUDPTransport::broadcastMsg(Message& msg)
     struct sockaddr_in dest;
     dest.sin_family = AF_INET;
     dest.sin_addr.s_addr = _multicastAddr.addr;
-    dest.sin_port = htons(_multicastAddr.port);
+    dest.sin_port = _multicastAddr.port;
 
     // If the local node only has 1 ethernet inteface, send on the default.
     if (_interfaces.size() < 2)

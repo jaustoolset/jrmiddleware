@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
         }
 
         // check for incoming messages
-        for (int i=0; i<5000, !exit_flag; i++)
+        for (int i=0; i<500; i++)
         {
             unsigned int buffersize = MaxBufferSize; msg_id = 0; int flags = 0;
             JrErrorCode ret = JrReceive(handle, &sender, &msg_id, &buffersize, buffer, NULL, &flags);
@@ -147,8 +147,12 @@ int main(int argc, char* argv[])
                 //if ((msgcount % 500) == 0)
                     printf("Incoming Msg: Sender = %ld, Count = %ld, ID = %ld, Size = %ld, Flags = %ld\n", sender, msgcount, msg_id, buffersize, flags);
                 prevMsg = msgcount;
-            }               
+            }  
 
+            // check for exit condition
+            if (exit_flag) break;
+
+            // Sleep a bit before calling receive again
             Sleep(1);
         }
     }

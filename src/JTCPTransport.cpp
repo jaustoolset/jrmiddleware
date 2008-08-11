@@ -186,8 +186,8 @@ Transport::TransportError JTCPTransport::sendMsg(Message& msg)
         // Connect to the given IP address and port
         struct sockaddr_in sockAddr;
         sockAddr.sin_family = AF_INET;
-        sockAddr.sin_addr.s_addr = htonl(destAddr.addr);
-        sockAddr.sin_port = htons(destAddr.port);
+        sockAddr.sin_addr.s_addr = destAddr.addr;
+        sockAddr.sin_port = destAddr.port;
         if (connect(destSocket,(struct sockaddr*)&sockAddr,sizeof(sockAddr))<0)
         {
             JrError << "Unable to connect to TCP port at " << destAddr.toString() << std::endl;
@@ -240,14 +240,14 @@ Transport::TransportError JTCPTransport::recvMsg(MessageList& msglist)
 
         // getting here means we have data.  pull it.
         int len = recv(*iter, buffer, 5000, 0);
-        if (len < 0) continue;
+        if (len <= 0) continue;
         JrDebug << "Read " << len << " bytes on TCP port\n";
 
         // Since TCP data represents a stream, we can't assume the data
         // read represents a complete message.  Add it to the data previously
         // received.
         if (_socket_data.count(*iter) < 1) continue;
-        _socket_data[*iter]->append(buffer, len);
+        _socket_data[*iter]->setData(buffer, len);
 
         // If we've accrued a valid packet, shape it into a message
         while (_socket_data[*iter]->isArchiveValid())

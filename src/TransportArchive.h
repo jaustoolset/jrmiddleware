@@ -469,6 +469,15 @@ class JTCPArchive : public TransportArchive
         JrDebug << "Found valid TCP packet\n";
         return true;
     }
+    void setData( const char* buffer, unsigned short length )
+    {
+        // Override setData since TCP acts as a stream of data,
+        // and "set" really means "append".  Unless it's the first
+        // packet we receive, then it really does mean "set".
+        if (data_length <= 3) Archive::setData(buffer, length);
+        else append(buffer, length);
+    }
+
 };
 
 

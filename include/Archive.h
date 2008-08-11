@@ -153,7 +153,7 @@ public:
 
     // Specialized function for appending data onto the archive
     void append(Archive& archive);
-    void append(char* buffer, unsigned int length);
+    void append(const char* buffer, unsigned int length);
 
     // We can't use a template to access a string directly
     void getValueAt(int index, std::string& value)
@@ -259,7 +259,7 @@ inline void Archive::append(Archive& archive)
     data_length += archive.getArchiveLength();
 }
 
-inline void Archive::append(char* buffer, unsigned int length)
+inline void Archive::append(const char* buffer, unsigned int length)
 {
     // If necessary, grow the buffer to accommodate the new data
     growBuffer(data_length + length);
