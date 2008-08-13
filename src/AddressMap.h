@@ -74,6 +74,8 @@ inline bool AddressMap<S>::removeAddress(JAUS_ID id)
 template<class S>
 inline bool AddressMap<S>::getAddrFromId(JAUS_ID id, S& addr)
 {
+    if (id == 0) return false;
+
     // Check for a match based on the JAUS_ID
     for (int i=0; i < _list.size(); i++)
     {
@@ -92,7 +94,7 @@ inline bool AddressMap<S>::getIdFromAddr( JAUS_ID& id, S addr )
    // Check for a match based on the addr
     for (int i=0; i < _list.size(); i++)
     {
-        if (_list[i].second == addr)
+        if ((_list[i].second == addr) && (_list[i].first != 0))
         {
             id = _list[i].first;
             return true;

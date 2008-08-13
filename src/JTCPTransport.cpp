@@ -136,6 +136,7 @@ Transport::TransportError JTCPTransport::sendMsg(Message& msg, int destSocket)
     if (val < 0) 
     {
         JrError << "Unable to send TCP packet.  Error: " << getSocketError << std::endl;
+        closeConnection(destSocket);
         result = Failed;
     }
     else if (val != payload.getArchiveLength())
@@ -316,5 +317,25 @@ Transport::TransportError JTCPTransport::acceptConnections()
     }
 
     JrDebug << "Closing thread that manages TCP connection requests\n";
+    return Ok;
+}
+
+Transport::TransportError JTCPTransport::closeConnection(int socket)
+{
+    // Close the socket
+    closesocket(socket);
+
+    // Free the data, if any, associated with the socket.
+    if (_socket_data.count(socket) > 0) 
+    {
+        delete(_socket_data[socket]);
+        _socket_data.erase(socket);
+    }
+
+    // Remove the socket from the various list and maps
+    JAUS_ID id;
+    if (_socket_map.getIdFromAddr( id, socket))
+        _socket_map.removeAddress(id);
+    _socket_list.remove(socket);
     return Ok;
 }

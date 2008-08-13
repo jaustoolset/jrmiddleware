@@ -42,6 +42,7 @@ public:
     // These functions are specific to TCP implementation
     TransportError sendMsg(Message& msg, int socket);
     TransportError acceptConnections();
+    TransportError closeConnection(int socket);
 
 protected:
 
