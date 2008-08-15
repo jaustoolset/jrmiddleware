@@ -14,7 +14,6 @@
 
 #include "Transport.h"
 #include "TransportArchive.h"
-#include "HeaderCompression.h"
 #include "IpAddressBook.h"
 #include <sstream>
 
@@ -38,14 +37,10 @@ protected:
 
     IpAddressBook            _map;
     int                      _socket;
-    HeaderCompressionTable   _inTable, _outTable;
     IP_ADDRESS               _multicastAddr;
     std::list<unsigned long> _interfaces;
+    std::map<JAUS_ID, bool>  _format_map;
     char                     _use_opc;
-
-    // Internal functions to help with compression
-    bool uncompressHeader( TransportArchive*, JAUS_ID, struct sockaddr_in& );
-    bool compressHeader  ( TransportArchive*, JAUS_ID );
 
 };
 }} // namespace DeVivo::Junior

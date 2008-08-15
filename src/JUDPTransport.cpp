@@ -32,10 +32,9 @@ using namespace DeVivo::Junior;
 JUDPTransport::JUDPTransport():
     _map(),
     _socket(0),
-    _inTable(),
-    _outTable(),
     _multicastAddr(),
     _interfaces(),
+    _format_map(),
     _use_opc(0)
 {
 }
@@ -150,18 +149,19 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
     //
     // Creating a byte stream (payload) for the message
     //
-    TransportArchive *payload;
-    if (_use_opc) payload = new OPCArchive;
-    else payload = new JUDPArchive;
-    if (payload == NULL) return Failed;
+    OPCArchive opc_payload;
+    JUDPArchive udp_payload;
     
     //
     // Loop through all known destination, sending to each match.
     //
     for (int i = 0; i < _map.getList().size(); i++)
     {
-        if ((_map.getList()[i].first == destId) &&
-            (msg.getSourceId() != _map.getList()[i].first))
+        // Store a local variable for convenience
+        JAUS_ID id = _map.getList()[i].first;
+
+        // Check this ID against the message's destination
+        if ((id == destId) && (msg.getSourceId() != id))
         {
             //
             // Change the destination to the specific JAUS_ID.  In most cases,
@@ -172,21 +172,26 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
             // NOTE!!! We should optimize this later so we're not always
             // packing the message for each destination.
             //
-            msg.setDestinationId(_map.getList()[i].first);
+            msg.setDestinationId(id);
+
+            //
+            // For each destination, we use the header_map to determine the form
+            // of header being used.  If no entry exists in the map, the
+            // default selection from _use_opc is taken.
+            TransportArchive *payload;
+            if (_format_map.count(id) > 0)
+                payload = (_format_map[id]) ? &opc_payload : (TransportArchive*)&udp_payload;
+            else
+                payload = (_use_opc) ? &opc_payload : (TransportArchive*)&udp_payload;
 
             //
             // Now pack the message for network transport and append
-            // it on the JUDP archive.
+            // it on the payload archive.
             //
             Archive msg_archive;
             msg.pack(msg_archive);
             payload->reset();
             payload->setJausMsgData( msg_archive );
-
-            //
-            // Apply header compression
-            //
-            compressHeader( payload, _map.getList()[i].first );
 
             // Create the destination address structure
             struct sockaddr_in dest;
@@ -204,7 +209,7 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
             }
             else 
             {
-                JrDebug << "Sent " << payload->getArchiveLength() << "bytes on UDP port\n";
+                JrDebug << "Sent " << payload->getArchiveLength() << " bytes on UDP port\n";
                 result = Ok;
             }
         }
@@ -214,7 +219,6 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
     // so we need to restore it before returning.  In most cases,
     // this will do nothing.
     msg.setDestinationId( destId );
-    delete payload;
     return result;
 }
 
@@ -243,7 +247,7 @@ Transport::TransportError JUDPTransport::recvMsg(MessageList& msglist)
                               (struct sockaddr*) &source, 
                               (socklen_t*) &source_length);
         if (result <= 0) break;
-        JrDebug << "Read " << source_length << " bytes on UDP port\n";
+        JrDebug << "Read " << result << " bytes on UDP port\n";
 
         // 
         // Pull off the source IP info for convenience.  Look-up the corresponding
@@ -257,16 +261,29 @@ Transport::TransportError JUDPTransport::recvMsg(MessageList& msglist)
         // Getting to this point means we have a message.  
         // Check what type, so we use the appropriate archive.  
         // 
+        bool isOpc = false;
         TransportArchive *raw_msg = NULL;
-        if ((buffer[0] == 1) && (!_use_opc))
+        if (buffer[0] == 1)
+        {
+            JrDebug << "JUDP packet detected.  Valid version\n";
             raw_msg = new JUDPArchive;
-        else if ((strncmp(buffer, "JAUS01.0", OPC_HeaderSize)==0) && _use_opc)
+        }
+        else if (strncmp(buffer, "JAUS01.0", OPC_HeaderSize)==0)
+        {
+            JrDebug << "UDP packet contains OPC header.  Valid version\n";
             raw_msg = new OPCArchive; 
-
-        // Check for unknown message types.  Silently discard.
-        if (raw_msg == NULL)
+            isOpc = true;
+        }
+        else
         {
             JrWarn << "Received unknown version on UDP port.  Discarding\n";
+            continue;
+        }
+
+        // Check for allocation problems
+        if (raw_msg == NULL)
+        {
+            JrError << "Unable to allocation memory for incoming UDP packet\n";
             continue;
         }
 
@@ -279,20 +296,8 @@ Transport::TransportError JUDPTransport::recvMsg(MessageList& msglist)
         // adding it to the return list.
         while (raw_msg->getArchiveLength() > raw_msg->getHeaderLength())
         {
-            // Handle header compression.  If uncompressing the message fails,
-            // silently discard the message (but not the remainder of the packet)
-            if (!uncompressHeader( raw_msg, sourceId, source ))
-            {
-                // Remove this message from the JUDP archive, so
-                // we can process the next message in the packet.
-                JrWarn << "Failed to uncompress UDP packet.  Discarding\n";
-                raw_msg->removeHeadMsg( );
-                continue;
-            }
-
             // If the message length is zero, this message was only a transport
-            // message (probably a Header Compression message).  Nothing more
-            // to do.
+            // message.  Nothing more to do.
             raw_msg->getMsgLength( jausMsgLength );
             if ( jausMsgLength != 0 )
             {
@@ -305,8 +310,10 @@ Transport::TransportError JUDPTransport::recvMsg(MessageList& msglist)
 
                 //
                 // Add the source to the transport discovery map.
+                // We also need to remember the format that was used.
                 //
                 _map.addAddress( msg->getSourceId(), sourceAddr );
+                _format_map[msg->getSourceId()] = isOpc;
 
                 // Add the message to the list and change the return value
                 JrDebug << "Found valid UDP message (size " << jausMsgLength << ")\n";
@@ -327,87 +334,15 @@ Transport::TransportError JUDPTransport::recvMsg(MessageList& msglist)
     return ret;
 }
 
-
-bool JUDPTransport::uncompressHeader( TransportArchive* packed_msg,
-                                      JAUS_ID  source,
-                                      struct sockaddr_in& sourceAddr )
-{
-    // Behavior changes based on the HC values.  Extract  the flags.
-    unsigned char flags;
-    packed_msg->getHCFlags( flags );
-
-    if (flags == 0)
-    {
-        // No compression requested.  Nothing to do.
-        return true;
-    }
-    else if ( flags == 1)
-    {
-        // HEADER COMPRESSION STILL NEEDS WORK.  NOT YET FUNCTIONAL.
-        return true;
-
-        // source has requested compression.  Add an entry to our table
-        //_inTable.update( source, packed_msg );
-
-        // Create the acceptance message, using the JUDP header from the 
-        // incoming message for convenience.  We need to change the HC flags
-        // and clear the message length.
-        //JUDPArchive response;
-        //response.setData( packed_msg->getArchive(), 5 );
-        //response.setMsgLength( 0 );
-        //response.setHCFlags( 2 );
-
-        //printf("Send header compression response to %s:%d\n",
-        //       inet_ntoa( *(struct in_addr*) &sourceAddr.sin_addr.s_addr ),
-        //       htons(sourceAddr.sin_port));
-
-        // Lastly, send the message back to the source
-        //sendto(_socket, response.getArchive(), 
-        //           response.getArchiveLength(), 0,
-        //            (struct sockaddr*) &sourceAddr, sizeof(sourceAddr));
-        //return true;
-    }
-    else if (flags == 2)
-    {
-        // acceptance message for header compression.  Update the entry.
-        //_outTable.update( source, packed_msg );
-        return true;
-    }
-    else if (flags == 3)
-    {
-        // CURRENTLY AN ERROR CASE!  WE SHOULD NEVER RECEIVE A COMPRESSED MSG.
-        return false;
-
-        // Compressed message received.  Uncompress it.
-        //_inTable.uncompress( source, packed_msg );
-    }
-    
-    return false;
-}
-
-
-bool JUDPTransport::compressHeader( TransportArchive* packed_msg,
-                                    JAUS_ID  destId )
-{
-    // HEADER COMPRESSION STILL NEEDS WORK.  NOT YET FUNCTIONAL.
-    return false;
-
-    // Check for a special case.  If we're broadcasting
-    // the messsage, don't try to compress anything 
-    //if (destId.containsWildcards()) return false;
-
-    // Header compression is handled within the table.
-    //return (_outTable.compress( destId, packed_msg ));
-}
-
 Transport::TransportError JUDPTransport::broadcastMsg(Message& msg)
 {
     TransportError ret = Ok;
 
     //
     // Serialize the message.  Start by
-    // creating a byte stream (payload) that contains the JUDP
-    // header.
+    // creating a byte stream (payload) that contains the appropriate
+    // header.  Note that Jr will only broadcast with the JUDP header
+    // or the OPC header, never both.
     //
     TransportArchive *payload;
     if (_use_opc) payload = new OPCArchive;
