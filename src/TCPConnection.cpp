@@ -37,7 +37,7 @@ JTCPConnection::JTCPConnection(int socket):
 
 JTCPConnection::~JTCPConnection()
 {
-    if (_socket > 0) close();
+    if (_socket > 0) closesocket(_socket);
 }
 
 
@@ -130,14 +130,6 @@ Transport::TransportError JTCPConnection::recvMsg(MessageList& msglist)
 }
 
 
-Transport::TransportError JTCPConnection::close()
-{
-    // Close the socket
-    closesocket(_socket);
-    return Transport::Ok;
-}
-
-
 // Implementation for Connection List Manager
 JTCPConnection* JTCPConnectionList::addConnection(int socket)
 {
@@ -159,7 +151,6 @@ void JTCPConnectionList::closeConnection(int socket)
     if (_connections.count(socket) == 0) return;
 
     // Close it
-    _connections[socket]->close();
     delete (_connections[socket]);
 
     // And remove from the map

@@ -34,7 +34,6 @@ public:
     // Public interface functions
     Transport::TransportError sendMsg(Message& msg);
     Transport::TransportError recvMsg(MessageList& msglist);
-    Transport::TransportError close();
 
     // Data accessors
     int getSocket(){return _socket;}
