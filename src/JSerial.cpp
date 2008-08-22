@@ -348,8 +348,7 @@ Transport::TransportError JSerial::recvMsg(MessageList& msglist)
                 {
                     // DLE marks a packet start.  See if the 
                     // unused bytes contain a valid packet
-                    if (unusedBytes.isArchiveValid())
-                        ret = extractMsgsFromPacket(msglist);
+                    ret = extractMsgsFromPacket(msglist);
 
                     // Update the log if we're discarding 
                     // a non-empty packet
@@ -385,8 +384,7 @@ Transport::TransportError JSerial::recvMsg(MessageList& msglist)
     }
 
     // Check packet for completeness.  If so, parse message(s).
-    if (unusedBytes.isArchiveValid())
-        ret = extractMsgsFromPacket(msglist);
+    ret = extractMsgsFromPacket(msglist);
     
     // done processing this read.  return.
     return ret;
@@ -404,19 +402,21 @@ Transport::TransportError JSerial::broadcastMsg(Message& msg)
 
 Transport::TransportError JSerial::extractMsgsFromPacket(MessageList& msglist)
 {
-    TransportError ret = NoMessages;
     unsigned short jausMsgLength;
+
+    // Check for trivial case
+    if (!unusedBytes.isArchiveValid()) return NoMessages;
 
     // A single packet may have multiple JAUS messages on it, each
     // with there own header compression flags.  We need to parse through
     // the entire packet, remove each message one at a time and
     // adding it to the return list.
-    while (unusedBytes.getArchiveLength() > unusedBytes.getHeaderLength())
+    while (unusedBytes.isArchiveValid())
     {
         // If the message length is zero, this message was only a transport
         // message (probably a Header Compression message).  Nothing more
         // to do.
-        unusedBytes.getMsgLength( jausMsgLength );
+        unusedBytes.getJausMsgLength( jausMsgLength );
         if ( jausMsgLength != 0 )
         {
             // Extract the payload into a message
@@ -434,7 +434,6 @@ Transport::TransportError JSerial::extractMsgsFromPacket(MessageList& msglist)
             // Add the message to the list and change the return value
             JrDebug << "Found valid serial message (size " << jausMsgLength << ")\n";
             msglist.push_back(msg);
-            ret = Ok;
         }
 
         // Remove this message from the archive, so
@@ -444,5 +443,5 @@ Transport::TransportError JSerial::extractMsgsFromPacket(MessageList& msglist)
 
     // Clear the data buffer and return
     unusedBytes.clear();
-    return ret;
+    return Ok;
 }

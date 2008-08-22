@@ -190,7 +190,6 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
             //
             Archive msg_archive;
             msg.pack(msg_archive);
-            payload->reset();
             payload->setJausMsgData( msg_archive );
 
             // Create the destination address structure
@@ -294,11 +293,11 @@ Transport::TransportError JUDPTransport::recvMsg(MessageList& msglist)
         // with there own header compression flags.  We need to parse through
         // the entire packet, remove each message one at a time and
         // adding it to the return list.
-        while (raw_msg->getArchiveLength() > raw_msg->getHeaderLength())
+        while (raw_msg->isArchiveValid())
         {
             // If the message length is zero, this message was only a transport
             // message.  Nothing more to do.
-            raw_msg->getMsgLength( jausMsgLength );
+            raw_msg->getJausMsgLength( jausMsgLength );
             if ( jausMsgLength != 0 )
             {
                 // Extract the payload into a message

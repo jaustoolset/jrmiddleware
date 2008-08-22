@@ -24,10 +24,9 @@ using namespace DeVivo::Junior;
 #ifdef WINDOWS
 #define getSocketError WSAGetLastError()
 #else
-#define getSocketError errno
 #define closesocket close
+#define getSocketError errno
 #endif
-
 
 // Helper function.  This needs to be static so we can
 // call it from pthread_create.
@@ -40,9 +39,7 @@ static void* JrAcceptConnections(void* arg)
 // TCP Class implementation
 JTCPTransport::JTCPTransport():
     _address_map(),
-    _socket_map(),
-    _socket_list(),
-    _socket_data(),
+    _connectionsList(),
     _listen_socket(0),
     _exit_flag(false)
 {
@@ -51,7 +48,6 @@ JTCPTransport::JTCPTransport():
 JTCPTransport::~JTCPTransport()
 {
     if (_listen_socket > 0) closesocket(_listen_socket);
-    //_exit_flag = true;
 }
 
 Transport::TransportError JTCPTransport::initialize( std::string filename )
@@ -119,40 +115,6 @@ Transport::TransportError JTCPTransport::initialize( std::string filename )
     return Ok;
 }
 
-// Helper function to send to a given socket
-Transport::TransportError JTCPTransport::sendMsg(Message& msg, int destSocket)
-{
-    Transport::TransportError result = AddrUnknown;
-
-    // Assume we have a valid destination socket.
-    // Serialize the message to send.
-    JTCPArchive payload;
-    Archive msg_archive;
-    msg.pack(msg_archive);
-    payload.setJausMsgData( msg_archive );
-
-    // Send the data
-    int val = send(destSocket, payload.getArchive(), payload.getArchiveLength(), 0);
-    if (val < 0) 
-    {
-        JrError << "Unable to send TCP packet.  Error: " << getSocketError << std::endl;
-        closeConnection(destSocket);
-        result = Failed;
-    }
-    else if (val != payload.getArchiveLength())
-    {
-        JrError << "Unable to full TCP packet.  Sent  " << val << " of " <<
-            payload.getArchiveLength() << " bytes.\n";
-        result = Failed;
-    }
-    else
-    {
-        JrDebug << "Sent " << payload.getArchiveLength() << "bytes on TCP connection\n";
-        result = Ok;
-    }
-
-    return result;
-}
 
 Transport::TransportError JTCPTransport::sendMsg(Message& msg)
 {
@@ -160,8 +122,8 @@ Transport::TransportError JTCPTransport::sendMsg(Message& msg)
     JAUS_ID destId = msg.getDestinationId();
 
     // First check to see if we have an open socket.
-    int destSocket;
-    if (!_socket_map.getAddrFromId(destId, destSocket))
+    JTCPConnection* pDest = _connectionsList.getConnection(destId);
+    if (!pDest)
     {
         // Didn't find a match in the list of open sockets.
         // Do we know the ip address for the given destination?
@@ -176,7 +138,7 @@ Transport::TransportError JTCPTransport::sendMsg(Message& msg)
         }
 
         // Try to open a socket to the specified IP address
-        destSocket = socket(AF_INET, SOCK_STREAM, 0);
+        int destSocket = socket(AF_INET, SOCK_STREAM, 0);
         if (destSocket < 0)
         {
             JrError << "Unable to create socket for TCP communication.  Error: " 
@@ -196,11 +158,11 @@ Transport::TransportError JTCPTransport::sendMsg(Message& msg)
             return Failed;
         }
 
-        // We also need to create a storage buffer to keep incoming data
-        JTCPArchive* socket_data = new JTCPArchive();
-        if (socket_data == NULL)
+        // Add this to the connection list.  The list manager will create
+        // the connection object.
+        if ((pDest = _connectionsList.addConnection(destSocket)) == NULL)
         {
-            JrError << "Unable to allocate data buffer for incoming TCP messages\n";
+            JrError << "Unable to create connection object for TCP messages\n";
             closesocket(destSocket);
             return Failed;
         }
@@ -208,79 +170,34 @@ Transport::TransportError JTCPTransport::sendMsg(Message& msg)
         // debug
         JrDebug << "Opening TCP connection to " << destAddr.toString() << std::endl;
 
-        // With a successful connection, add it to the map and the socket list
-        _socket_map.addAddress(destId, destSocket);
-        _socket_list.push_back(destSocket);
-        _socket_data[destSocket] = socket_data;
+        // Also set the JAUS_ID for this destination.
+        pDest->setJausId(destId);
     }
 
-    // Getting to this point means we have a valid destination socket.
-    // Send on this socket
-    return sendMsg(msg, destSocket);
+    // Getting to this point means we have a valid connection object for
+    // the specified destination.  Try to send the message.  If it fails,
+    // close the connection.
+    if (pDest->sendMsg(msg) != Transport::Ok)
+    {
+        _connectionsList.closeConnection(pDest->getSocket());
+        return Failed;
+    }
+
+    return Ok;
 }
 
 
 Transport::TransportError JTCPTransport::recvMsg(MessageList& msglist)
 {
-    char buffer[5000];
-    Transport::TransportError ret = NoMessages;
-
-    // We need to check each open socket for waiting data.  If we
-    // process data on a particular socket, we can 
-    // subsequently check the archive to see if it contains a full 
-    // message.  Any messages get added to the list returned
-    // to the caller.
-    SocketListIter iter;
-    for (iter = _socket_list.begin(); iter != _socket_list.end(); iter++)    
-    {
-        // Check the socket for data.  
-        struct timeval timeout;
-        timeout.tv_sec=0; timeout.tv_usec=0;
-        fd_set set; FD_ZERO(&set); FD_SET(*iter, &set);
-        if (select(*iter+1, &set, NULL, NULL, &timeout) == 0) continue;
-
-        // getting here means we have data.  pull it.
-        int len = recv(*iter, buffer, 5000, 0);
-        if (len <= 0) continue;
-        JrDebug << "Read " << len << " bytes on TCP port\n";
-
-        // Since TCP data represents a stream, we can't assume the data
-        // read represents a complete message.  Add it to the data previously
-        // received.
-        if (_socket_data.count(*iter) < 1) continue;
-        _socket_data[*iter]->setData(buffer, len);
-
-        // If we've accrued a valid packet, shape it into a message
-        while (_socket_data[*iter]->isArchiveValid())
-        {
-            Archive archive;
-            unsigned short jausMsgLength;
-            _socket_data[*iter]->getMsgLength(jausMsgLength);
-            archive.setData( _socket_data[*iter]->getJausMsgPtr(), jausMsgLength);
-            Message* msg = new Message();
-            msg->unpack(archive);
-
-            // Add the message to the list and change the return value
-            JrDebug << "Found valid TCP message (size " << jausMsgLength << ")\n";
-            msglist.push_back(msg);
-            ret = Ok;
-
-            // Remove this message from the archive.
-            _socket_data[*iter]->removeHeadMsg();
-        }
-    }
-
-    return ret;
+    _connectionsList.recvMsgs(msglist);
+    return Transport::Ok;
 }
-
 
 Transport::TransportError JTCPTransport::broadcastMsg(Message& msg)
 {
     // TCP doesn't support true broadcast.  Best we can do is send 
     // the message on all known sockets.
-    SocketListIter iter;
-    for (iter = _socket_list.begin(); iter != _socket_list.end(); iter++)    
-        sendMsg(msg, *iter);
+    _connectionsList.sendMsgToAll(msg);
     return Ok;
 }
 
@@ -303,39 +220,11 @@ Transport::TransportError JTCPTransport::acceptConnections()
             IP_ADDRESS clientAddr( addr );
             JrDebug << "Received connection request from " << clientAddr.toString() << std::endl;
 
-            // We also need to create a storage buffer to keep incoming data
-            JTCPArchive* socket_data = new JTCPArchive();
-            if (socket_data != NULL)
-            {
-                // Add this connection to our incoming sockets list
-                _socket_list.push_back(newSock);
-                _socket_data[newSock] = socket_data;
-            }
-            else
-                JrError << "Unable to allocate data buffer for incoming TCP messages\n";
+            // Add this connection to the list
+            _connectionsList.addConnection(newSock);
         }
     }
 
     JrDebug << "Closing thread that manages TCP connection requests\n";
-    return Ok;
-}
-
-Transport::TransportError JTCPTransport::closeConnection(int socket)
-{
-    // Close the socket
-    closesocket(socket);
-
-    // Free the data, if any, associated with the socket.
-    if (_socket_data.count(socket) > 0) 
-    {
-        delete(_socket_data[socket]);
-        _socket_data.erase(socket);
-    }
-
-    // Remove the socket from the various list and maps
-    JAUS_ID id;
-    if (_socket_map.getIdFromAddr( id, socket))
-        _socket_map.removeAddress(id);
-    _socket_list.remove(socket);
     return Ok;
 }

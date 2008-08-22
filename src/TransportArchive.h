@@ -31,23 +31,12 @@ class TransportArchive : public Archive
     TransportArchive() : Archive() {}
     ~TransportArchive(){}
 
-    virtual void getMsgLength( unsigned short& length ) { }
-    virtual void setMsgLength( unsigned short length ) {length = 0;}
-    virtual void getHCFlags( unsigned char& flags ) {flags = 0;}
-    virtual void setHCFlags( unsigned char flags ) { }
-    virtual void getHCLength( unsigned char& length ) {length = 0;}
-    virtual void setHCLength( unsigned char length ) { }
-    virtual void getHCNumber( unsigned char& num ) { num = 0;}
-    virtual void setHCNumber( unsigned char num )  {  }
-    virtual unsigned char getHeaderLength() {return 0;}
-    virtual void removeHeadMsg() { }
-    virtual char* getJausMsgPtr( ) { return &data[0]; }
-    virtual void  setJausMsgData(Archive& msg) 
-    { 
-        append(msg);
-        setMsgLength( msg.getArchiveLength() );
-    }
-    virtual void reset() = 0;
+    virtual void getJausMsgLength( unsigned short& length ) = 0;
+    virtual void setJausMsgLength( unsigned short length ) = 0;
+    virtual void removeHeadMsg() = 0;
+    virtual char* getJausMsgPtr( ) = 0;
+    virtual void  setJausMsgData(Archive& msg) = 0; 
+    virtual bool isArchiveValid(){return true;}
 };
 
 
@@ -58,107 +47,94 @@ class TransportArchive : public Archive
 class JUDPArchive : public TransportArchive
 {
   public:
-    JUDPArchive() : TransportArchive()
-    {
-        reset();
-    }
+    JUDPArchive() : TransportArchive(){}
     ~JUDPArchive(){}
-
-    void getMsgLength( unsigned short& length ) 
+    void getJausMsgLength( unsigned short& length ) 
     {
         getValueAt(3, length); 
         length = ntohs(length);
     }
-    void setMsgLength( unsigned short length )
+    void setJausMsgLength( unsigned short length )
     {
         unsigned short temp = htons( length );
        *((unsigned short*) &data[3]) = temp;
     }
-    void getHCFlags( unsigned char& flags )
-    {
-        getValueAt( 2, flags);
-        flags &= 0xC0; // flags are the highest 2 bits
-        flags = flags >> 6;
-    }
-    void setHCFlags( unsigned char flags )
-    {
-        // Set the bits without clobbering length
-        data[2] = (data[2] & 0x3F) | (flags << 6);
-    }
-    void getHCLength( unsigned char& length )
-    {
-        getValueAt( 2, length );
-        length &= 0x3F; // length is the lower 6 bits 
-    }
-    void setHCLength( unsigned char length )
-    {
-        // Set length bits without clobbering flags
-        data[2] = (data[2] & 0xC0) | length;
-    }
-    void getHCNumber( unsigned char& num ) { getValueAt( 1, num ); }
-    void setHCNumber( unsigned char num )  { data[1] = num; }
-    unsigned char getHeaderLength() {return 1;}
     char* getJausMsgPtr( ) { return &data[5]; }
+    void  setJausMsgData(Archive& msg)
+    {
+        // set the header
+        growBuffer(5);
+        memset(data, 0, 5);
+        data[0] = 1;
+        data_length = 5;
 
+        // append the JAUS message and set the message length
+        append(msg);
+        setJausMsgLength(msg.getArchiveLength());
+    }
     void removeHeadMsg()
     {
         // Remove the first message in the archive.
         // This gets complicated since we need to remove
         // the Header Compression bits associated with it.
         unsigned short length;
-        getMsgLength(length);
+        getJausMsgLength(length);
         if (length > (getArchiveLength() - 5))
             length = getArchiveLength() - 5;
         removeAt(1, 4+length);
     }
-    void reset()
+    bool isArchiveValid()
     {
-        // reset the packet details
-        growBuffer(5);
-        memset(data, 0, data_length);
-        data[0] = 1;
-        data_length = 5;
+        // Check the header
+        if (getArchiveLength() < 5) return false;
+        if (data[0] != 1) return false;
+
+        // Check the length
+        unsigned short jausMsgLen;
+        getJausMsgLength(jausMsgLen);
+        if (jausMsgLen > data_length) return false;
+        return true;
     }
 };
 
 
 //
-// Define a child class for handling OPC archives.  They
-// don't support anything.
+// Define a child class for handling OPC archives.  
 //
 class OPCArchive : public TransportArchive
 {
   public:
-    OPCArchive() : TransportArchive()
-    {
-        reset();
-    }
+    OPCArchive() : TransportArchive(){}
     ~OPCArchive(){}
 
-    void getMsgLength( unsigned short& length ) 
+    void getJausMsgLength( unsigned short& length ) 
     {
         // Length does not include header
         length = getArchiveLength();
         length -= OPC_HeaderSize;
     }
+    void setJausMsgLength(unsigned short length){};
     char* getJausMsgPtr( ) { return &data[OPC_HeaderSize]; }
-    unsigned char getHeaderLength() {return OPC_HeaderSize;}
     void removeHeadMsg()
     {
-        // Remove the first message in the archive.
-        unsigned short length;
-        getMsgLength(length);
-        if (length > (getArchiveLength() - OPC_HeaderSize))
-            length = getArchiveLength() - OPC_HeaderSize;
-        removeAt(OPC_HeaderSize, length);
+        // Remove everything except the header
+        removeAt(OPC_HeaderSize, getArchiveLength()-OPC_HeaderSize);
     }
-    void reset()
+    void  setJausMsgData(Archive& msg)
     {
         // reset the data_length to drop the payload
         growBuffer(OPC_HeaderSize);
-        memset(data, 0, data_length);
         strncpy(data, "JAUS01.0", OPC_HeaderSize);
         data_length = OPC_HeaderSize;
+
+        // append the JAUS message and set the message length
+        append(msg);
+        setJausMsgLength(msg.getArchiveLength());
+    }
+    bool isArchiveValid()
+    {
+        if (getArchiveLength() <= OPC_HeaderSize) return false;
+        return true;
     }
 };
 
@@ -169,52 +145,20 @@ class OPCArchive : public TransportArchive
 class JSerialArchive : public TransportArchive
 {
   public:
-    JSerialArchive() : TransportArchive()
-    {
-        reset();
-    }
+    JSerialArchive() : TransportArchive(){}
     ~JSerialArchive(){}
-
-    void getMsgLength( unsigned short& length ) 
+    void getJausMsgLength( unsigned short& length ) 
     {
         char addressSize = usesExplicitAddress() ? 2 : 0;
         getValueAt(11+addressSize, length);
     }
-    void setMsgLength( unsigned short length )
+    void setJausMsgLength( unsigned short length )
     {
         // We need to set both the message length and packet length
         char addressSize = usesExplicitAddress() ? 2 : 0;
         setPackMode(LittleEndian);
         setValueAt(11+addressSize, length);
         setValueAt(3, (unsigned short)(length+4));
-    }
-    void getHCFlags( unsigned char& flags )
-    {
-        getValueAt( 10, flags);
-        flags &= 0xC0; // flags are the highest 2 bits
-        flags = flags >> 6;
-    }
-    void setHCFlags( unsigned char flags )
-    {
-        // Set the bits without clobbering length
-        data[10] = (data[10] & 0x3F) | (flags << 6);
-    }
-    void getHCLength( unsigned char& length )
-    {
-        getValueAt( 10, length );
-        length &= 0x3F; // length is the lower 6 bits 
-    }
-    void setHCLength( unsigned char length )
-    {
-        // Set length bits without clobbering flags
-        data[10] = (data[10] & 0xC0) | length;
-    }
-    void getHCNumber( unsigned char& num ) { getValueAt( 9, num ); }
-    void setHCNumber( unsigned char num )  { data[9] = num; }
-    unsigned char getHeaderLength() 
-    {
-        char addressSize = usesExplicitAddress() ? 2 : 0;
-        return (17+addressSize);
     }
     char* getJausMsgPtr( ) 
     { 
@@ -229,12 +173,12 @@ class JSerialArchive : public TransportArchive
         // This gets complicated since we need to remove
         // the Header Compression bits associated with it.
         unsigned short length;
-        getMsgLength(length);
-        if (length > (getArchiveLength() - getHeaderLength()))
-            length = getArchiveLength() - getHeaderLength();
+        getJausMsgLength(length);
+        if (length > (getArchiveLength() - 17 - addressSize))
+            length = getArchiveLength() - 17 - addressSize;
         removeAt(9+addressSize, 4+length);
     }
-    void reset()
+    void  setJausMsgData(Archive& msg)
     {
         // Seed the packed data
         growBuffer(17);
@@ -247,14 +191,10 @@ class JSerialArchive : public TransportArchive
         data[13] = 0x10; // <DLE>
         data[14] = 0x03; // <ETX>
         data_length = 17;
-    }
-    void  setJausMsgData(Archive& msg) 
-    { 
-        char addressSize = usesExplicitAddress() ? 2 : 0;
 
-        // because of the footer and CRCs, we need to overload this.
-        insertAt(13+addressSize, msg);
-        setMsgLength(msg.getArchiveLength());
+        // insert the data and update length
+        insertAt(13, msg);
+        setJausMsgLength(msg.getArchiveLength());
     }
     bool usesExplicitAddress()
     {
@@ -273,7 +213,7 @@ class JSerialArchive : public TransportArchive
     bool isArchiveValid()
     {
         // Make sure we have enough bytes to bother reading
-        if (getArchiveLength() < getHeaderLength())
+        if (getArchiveLength() < 17)
             return false;
 
         // Verify the packets version
@@ -405,42 +345,46 @@ class JSerialArchive : public TransportArchive
 class JTCPArchive : public TransportArchive
 {
   public:
-    JTCPArchive() : TransportArchive()
-    {
-        reset();
-    }
+    JTCPArchive() : TransportArchive(){}
     ~JTCPArchive(){}
-
-    void getMsgLength( unsigned short& length ) 
+    void getJausMsgLength( unsigned short& length ) 
     {
         getValueAt(1, length); 
         length = ntohs(length);
     }
-    void setMsgLength( unsigned short length )
+    void setJausMsgLength( unsigned short length )
     {
         unsigned short temp = htons( length );
        *((unsigned short*) &data[1]) = temp;
     }
-    unsigned char getHeaderLength() {return 1;}
     char* getJausMsgPtr( ) { return &data[3]; }
-
     void removeHeadMsg()
     {
         // Remove the first message in the archive.
         unsigned short length;
-        getMsgLength(length);
+        getJausMsgLength(length);
         if (length > (getArchiveLength() - 3))
             length = getArchiveLength() - 3;
-        removeAt(0, 3+length);
+        removeAt(1, 2+length);
+        JrFull << "Removed " << 2+length << " bytes from archive.  New size: " << 
+            getArchiveLength() << std::endl;
     }
-    void reset()
+    void removeVersion()
     {
-        // reset the packet details,
-        // reserving space for packet length
+        // remove the version number
+        removeAt(0,1);
+    }
+    void setJausMsgData(Archive& msg)
+    {
+        // reset the packet details, reserving space for packet length
         growBuffer(3);
-        memset(data, 0, data_length);
+        memset(data, 0, 3);
         data[0] = 1;
         data_length = 3;
+
+        // append the JAUS message and set the message length
+        append(msg);
+        setJausMsgLength(msg.getArchiveLength());
     }
     bool isArchiveValid()
     {
@@ -457,7 +401,7 @@ class JTCPArchive : public TransportArchive
 
         // Verify that the packet meets or exceeds the message length
         unsigned short messageLength = 0;
-        getMsgLength(messageLength);
+        getJausMsgLength(messageLength);
         if (messageLength >  (getArchiveLength() - 3))
         {
             JrDebug << "Invalid TCP packet (invalid size: " << messageLength <<
@@ -469,15 +413,6 @@ class JTCPArchive : public TransportArchive
         JrDebug << "Found valid TCP packet\n";
         return true;
     }
-    void setData( const char* buffer, unsigned short length )
-    {
-        // Override setData since TCP acts as a stream of data,
-        // and "set" really means "append".  Unless it's the first
-        // packet we receive, then it really does mean "set".
-        if (data_length <= 3) Archive::setData(buffer, length);
-        else append(buffer, length);
-    }
-
 };
 
 
