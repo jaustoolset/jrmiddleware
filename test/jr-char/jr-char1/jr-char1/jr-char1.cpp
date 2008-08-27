@@ -305,16 +305,13 @@ void score(int handle, unsigned long myid, unsigned long dest)
 
 	char buffer[MaxBufferSize];  // Make a data buffer for incoming/outgoing messages.
     unsigned long sender;
-	unsigned int buffersize = MaxBufferSize; 
-	unsigned short msg_id = 0; 
-	int priority = 0;
-	int previous_priority = 0;
-	int flags = 0;
+	int priority = 0, previous_priority = 0;
 
 	// check for incoming messages, loop either 100 times or exit after receipt of 4msgs
 	int received = 0;
 	for (int k = 0; k<100; k++) //arbitrary count of 10 
 	{
+        unsigned int buffersize = MaxBufferSize; unsigned short msg_id = 0; int flags = 0;
 		JrErrorCode ret = JrReceive(handle, &sender, &msg_id, &buffersize, buffer, &priority, &flags);
         if (ret == Ok)
 		{   
