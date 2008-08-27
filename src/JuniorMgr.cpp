@@ -440,7 +440,7 @@ JrErrorCode JuniorMgr::recvfrom(unsigned long* sender,
             JrErrorCode ret = Ok;
             if (*bufsize < data_size)
             {
-                JrError << "Receive buffer too small (buffer size: " << bufsize <<
+                JrError << "Receive buffer too small (buffer size: " << *bufsize <<
                     ", data size: " << data_size << std::endl; 
                 ret = Overflow;
             }
