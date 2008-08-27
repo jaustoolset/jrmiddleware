@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="c:\jr\include"
+				AdditionalIncludeDirectories="..\..\..\..\include;c:\Program Files\MicrosoftSDK\include"
 				PreprocessorDefinitions="WIN32;_DEBUG;WINDOWS"
 				RuntimeLibrary="3"
 				UsePrecompiledHeader="2"
@@ -61,7 +61,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="Junior.lib ws2_32.lib $(NOINHERIT) Kernel32.lib "
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="c:\jr\lib"
+				AdditionalLibraryDirectories="..\..\..\..\lib;c:\Program Files\MicrosoftSDK\lib"
 				GenerateDebugInformation="true"
 				AssemblyDebug="1"
 				TargetMachine="1"
@@ -117,6 +117,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalIncludeDirectories="..\..\..\..\include;c:\Program Files\MicrosoftSDK\include"
 				PreprocessorDefinitions="WIN32;NDEBUG"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="2"

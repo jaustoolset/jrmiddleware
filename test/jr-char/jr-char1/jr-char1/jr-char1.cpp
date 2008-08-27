@@ -23,7 +23,6 @@
 #include <sstream>
 #include <signal.h>
 #include <time.h>
-#include "OS.h"
 #ifdef WINDOWS
 #include <windows.h>
 #endif
@@ -56,7 +55,6 @@ void Sleep(unsigned long milliseconds){    usleep(milliseconds * 1000);	}
 #undef CONFIG_PATH_NAME
 #define CONFIG_PATH_NAME ""
 
-using namespace DeVivo::Junior;  //using namespace System; //automated entry from studio commented out
 
 const int MaxBufferSize = 70000;
 
