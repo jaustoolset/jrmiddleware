@@ -273,8 +273,8 @@ void echoMode(int handle, unsigned long myid, unsigned long dest)
 			else 
 				totalMsgsSent++;
         }
-        //Sleep(SLEEP_TIME);
-		Sleep(delay_t/10); //this must run faster...
+        else
+    		Sleep(delay_t/10); //this must run faster...
     }
 }
 /*     ----------   M E S S A G E   S E N D E R    ----------     */
@@ -343,8 +343,10 @@ void score(int handle, unsigned long myid, unsigned long dest)
 			totalMsgsRcvd++;
 			received++;				// receive a few messages if pending
 			if(( received > 3 ) || ((totalMsgsRcvd + totalErrorsDetected) >= totalMsgsSent)) break;
-			Sleep(delay_t/100); //this must run faster...
+		
 		}
+        else
+            Sleep(delay_t/100); //this must run faster...
 	}
 }
 /*     ----------   C A T C H   U P   ( P U R G E   R O U N D    T R I P    L O O P )  ----------     */
