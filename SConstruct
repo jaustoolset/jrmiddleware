@@ -33,6 +33,10 @@ if os.name == "nt":
    baseEnv.Append( LINKFLAGS = ['/DEFAULTLIB:"WSock32.Lib"'] )
    baseEnv['INSTALL_BINDIR'] = '#winbin'
 
+# When building for posix-compliant systems, we need the pthread_create library
+if os.name == "posix":
+   baseEnv.Append( LINKFLAGS = '-lpthread' )
+
 # Export the environment to children
 Export('baseEnv')
 
