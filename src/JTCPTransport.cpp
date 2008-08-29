@@ -211,7 +211,7 @@ Transport::TransportError JTCPTransport::acceptConnections()
         // we need to seed the address size before calling accept()
         int newSock;
         struct sockaddr_in addr;
-        int addr_length = sizeof(addr);
+        socklen_t addr_length = sizeof(addr);
 
         // wait for new connection requests
         if ((newSock = accept(_listen_socket, (struct sockaddr*) &addr, &addr_length)) > 0)
