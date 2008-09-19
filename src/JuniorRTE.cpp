@@ -63,6 +63,8 @@ int main(int argc, char* argv[])
     config.getValue("EnableTCPInterface", use_tcp);
     char use_serial = 0;
     config.getValue("EnableSerialInterface", use_serial);
+    char repeater_mode = 0;
+    config.getValue("EnableRepeaterMode", repeater_mode);
 
     // Now set-up the data logger
     if (debug_level > (int) Logger::full) debug_level = (int) Logger::full;
@@ -243,9 +245,19 @@ int main(int argc, char* argv[])
                 msg = msglist.front();
                 msglist.pop_front();
 
+                // In repeater mode, the Junior RTE will broadcast any incoming message
+                // on all interfaces.  THIS MODE SHOULD BE USED WITH CAUTION!!!
+                // If multiple junior instances are set to repeater mode, network traffic
+                // will continuous bounce between them until the end of time.
+                if (repeater_mode)
+                {
+                    for ( std::list<Transport*>::iterator tport = _transports.begin(); 
+                        tport != _transports.end(); ++tport)
+                          (*tport)->broadcastMsg(*msg);
+                }
                 // If relay is off, or this message is intended for a local client (and a 
                 // local client only), send it only on the socket interface.
-                if (!allowRelay || 
+                else if (!allowRelay || 
                     (std::find(_clients.begin(), _clients.end(), msg->getDestinationId().val) !=
                     _clients.end()))
                 {

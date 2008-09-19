@@ -16,9 +16,6 @@
 
 using namespace DeVivo::Junior;
 
-const unsigned int MaxMsgSize = 4079;
-
-
 JuniorMgr::JuniorMgr():
     _socket_ptr(NULL)
 {
@@ -30,6 +27,7 @@ JuniorMgr::JuniorMgr():
     _max_retries = 3;
     _ack_timeout = 100; // in milliseconds
     _msg_count = 0;
+    _max_msg_size = 4079;
 }
 
 JuniorMgr::~JuniorMgr()
@@ -266,16 +264,16 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
         // and we meet the size limit (broadcasts cannot be parsed into
         // multiple packets.
         flags &= 0xFFFFFFFE;
-        if (size > MaxMsgSize)
+        if (size > _max_msg_size)
         {
-            JrError << "Broadcast of buffers larger than 4079 bytes is not supported\n";
+            JrError << "Broadcast of buffers larger than MTU_Size is not supported\n";
             return Overflow;
         }
     }
 
     // If we're not trying to detect duplicate messages, we follow JAUS 5669, v1.
     // As a result, the sequence number must start at zero for large data sets.
-    if ((size > MaxMsgSize) && (!_detectDuplicates))
+    if ((size > _max_msg_size) && (!_detectDuplicates))
         _message_counter = 0;
 
     // We can never send more than 4079 bytes in a single
@@ -297,7 +295,7 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
 
         // Set the payload, being careful not to exceed
         // 4079 bytes on any individual message.
-        unsigned int payload_size = umin(MaxMsgSize, size - bytes_sent);
+        unsigned int payload_size = umin(_max_msg_size, size - bytes_sent);
         msg.setPayload(payload_size, &buffer[bytes_sent]);
 
         // Fill in the data control flags, so the receiver
@@ -616,5 +614,6 @@ JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
     config.getValue("DropDuplicateMsgs", _detectDuplicates);
     config.getValue("MaxAckNakRetries", _max_retries);
     config.getValue("AckTimeout", _ack_timeout);
+    config.getValue("MTU_Size", _max_msg_size);
     return Ok;
 }
