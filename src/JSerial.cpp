@@ -138,8 +138,8 @@ Transport::TransportError JSerial::configureLink()
     tcgetattr(hComm, &options);
 
     // set the baud rate
-    cfsetispeed(&options, baudrate);
-    cfsetospeed(&options, baudrate);
+    cfsetispeed(&options, B57600);
+    cfsetospeed(&options, B57600);
 
     // set the character size
     options.c_cflag &= ~CSIZE;
@@ -183,41 +183,17 @@ Transport::TransportError JSerial::configureLink()
     // enable raw output (this prevent interpretation of
     // the data stream for things line CR-LR
     options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
-    options.c_oflag &= ~OPOST; 
+    options.c_oflag &= ~(OPOST | ONLCR); 
+
+    // set the timing (no wait)
+    options.c_cc[VTIME] = 0;
+    options.c_cc[VMIN]  = 0;
 
     // Set the new options
     tcsetattr(hComm, TCSANOW, &options);
 
     // Make the port non-blocking
     fcntl(hComm, F_SETFL, FNDELAY);
-
-// enter command mode
-char command[10];command[0]=0x41;command[1]=0x54;command[2]=0x2B;
-command[3]=0x2B;command[4]=0x2B;command[5]=0x0D;
-int bytesWritten = write(hComm, command, 6);
-if (bytesWritten != 6) printf("Unable to enter command mode\n");
-usleep(1000);
-int bytesRead = 0;
-bytesRead = read(hComm, command,10);
-printf("Read %ld bytes from command\n", bytesRead);
-for (int i=0; i<bytesRead;i++) printf("0x%x ", command[i]);
-usleep(1000);
-
-// Now try to update the channel
-command[0]=0xCC;command[1]=0x01;command[2]=0x01;
-bytesWritten = write(hComm, command, 3);
-if (bytesWritten != 3) printf("Unable to write command\n");
-usleep(1000);
-bytesRead = read(hComm, command,10);
-printf("Read %ld bytes from command\n", bytesRead);
-for (int i=0; i<bytesRead;i++) printf("0x%x ", command[i]);
-printf("\n");
-
-// now try to leave command mode
-command[0]=0xCC;command[1]=0x41;command[2]=0x54;
-command[3]=0x4F;command[5]=0x0D;
-bytesWritten = write(hComm, command, 5);
-if (bytesWritten != 5) printf("Unable to exit command mode\n");
 
 #endif
 
