@@ -146,7 +146,7 @@ Transport::TransportError JSerial::configureLink()
     options.c_cflag |= CS8;
 
     // set the parity
-    options.c_iflag &= ~(INPCK | ISTRIP | IGNPAR | PARMRK);
+    options.c_iflag &= ~(INPCK | ISTRIP | IGNPAR | PARMRK | ICRNL);
     options.c_cflag &= ~(PARENB | PARODD);
     if (JrStrCaseCompare(parity, "odd"))
     {
@@ -182,8 +182,9 @@ Transport::TransportError JSerial::configureLink()
 
     // enable raw output (this prevent interpretation of
     // the data stream for things line CR-LR
-    options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+    options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG | IEXTEN);
     options.c_oflag &= ~(OPOST | ONLCR); 
+    options.c_iflag |= (IGNBRK | IGNCR);
 
     // set the timing (no wait)
     options.c_cc[VTIME] = 0;
@@ -191,9 +192,6 @@ Transport::TransportError JSerial::configureLink()
 
     // Set the new options
     tcsetattr(hComm, TCSANOW, &options);
-
-    // Make the port non-blocking
-    fcntl(hComm, F_SETFL, FNDELAY);
 
 #endif
 
@@ -217,7 +215,7 @@ Transport::TransportError JSerial::initialize( std::string filename )
                         OPEN_EXISTING, 0, 0);
 #else
     // Open a file descriptor
-    hComm = open(portname.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
+    hComm = open(portname.c_str(), O_RDWR | O_NOCTTY /*| O_NDELAY*/);
 #endif
 
     // Check for valid response
