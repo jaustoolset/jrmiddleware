@@ -48,7 +48,7 @@ int baud2Enum(int baud)
         case 230500: return B230400;
         case 115200: return B115200;
         case  57600: return B57600;
-        case  28400: return B28400;
+        case  38400: return B38400;
         case  19200: return B19200;
         case   9600: return B9600;
         case   4800: return B4800;
