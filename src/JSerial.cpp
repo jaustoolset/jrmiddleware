@@ -36,6 +36,34 @@ const char JSERIAL_ETX = 0x03;
 #endif
 
 
+// For Linux, we also need to convert baud rates
+// into the supported enum values.
+#ifndef WINDOWS
+int baud2Enum(int baud)
+{
+    switch (baud)
+    {
+        case 921600: return B921600;
+        case 460800: return B460800;
+        case 230500: return B230400;
+        case 115200: return B115200;
+        case  57600: return B57600;
+        case  28400: return B28400;
+        case  19200: return B19200;
+        case   9600: return B9600;
+        case   4800: return B4800;
+        case   2400: return B2400;
+        case   1200: return B1200;
+        case      0: return B19200;
+        default: 
+            JrWarn << "Unsupported baud rate.  Defaulting to 19200\n";
+            return B19200;
+    }
+    return B19200;
+}
+#endif
+
+
 // Class definition
 JSerial::JSerial():
    hComm(0),
@@ -52,7 +80,7 @@ JSerial::~JSerial()
 
 Transport::TransportError JSerial::configureLink()
 {
-    unsigned int baudrate = 9600;
+    unsigned int baudrate = 19200;
     _config.getValue("SerialBaudRate", baudrate);
     std::string parity = "none";
     _config.getValue("SerialParity", parity);
@@ -138,8 +166,8 @@ Transport::TransportError JSerial::configureLink()
     tcgetattr(hComm, &options);
 
     // set the baud rate
-    cfsetispeed(&options, B57600);
-    cfsetospeed(&options, B57600);
+    cfsetispeed(&options, 0);
+    cfsetospeed(&options, baud2Enum(baudrate));
 
     // set the character size
     options.c_cflag &= ~CSIZE;
