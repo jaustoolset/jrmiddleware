@@ -112,9 +112,7 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     setsockopt(_socket, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop));
     setsockopt(_socket, IPPROTO_IP, IP_MULTICAST_TTL, (const char*) &multicast_TTL, sizeof(multicast_TTL));
     setsockopt(_socket, IPPROTO_IP, IP_MULTICAST_IF, (const char*) &sockAddr, sizeof(sockAddr));
-    mreq.imr_interface.s_addr = htonl(INADDR_ANY);
     mreq.imr_multiaddr.s_addr = _multicastAddr.addr; 
-    setsockopt (_socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (const char*) &mreq, sizeof(mreq));
 
     // Using INADDR_ANY causes us to join the multicast group, but only
     // on the default NIC.  When multiple NICs are present, we need to join
@@ -315,7 +313,8 @@ Transport::TransportError JUDPTransport::recvMsg(MessageList& msglist)
                 _format_map[msg->getSourceId()] = isOpc;
 
                 // Add the message to the list and change the return value
-                JrDebug << "Found valid UDP message (size " << jausMsgLength << ")\n";
+                JrDebug << "Found valid UDP message (size " << jausMsgLength << 
+                    ", seq " << msg->getSequenceNumber() << ")\n";
                 msglist.push_back(msg);
                 ret = Ok;
             }

@@ -251,6 +251,10 @@ int main(int argc, char* argv[])
                 // will continuous bounce between them until the end of time.
                 if (repeater_mode)
                 {
+                    JrDebug << "Repeating message from " << msg->getSourceId().val <<
+                        " to " << msg->getDestinationId().val << " (seq " <<
+                        msg->getSequenceNumber() << ")\n";
+
                     for ( std::list<Transport*>::iterator tport = _transports.begin(); 
                         tport != _transports.end(); ++tport)
                           (*tport)->broadcastMsg(*msg);
@@ -264,10 +268,13 @@ int main(int argc, char* argv[])
                     // Match found.  Send to the socket interface.
                     publicSocket.sendMsg(*msg);
                 }
-                else
+                // Otherwise, forward this message on all channels (unless it originated locally)
+                else if (std::find(_clients.begin(), _clients.end(), msg->getSourceId().val) ==
+                          _clients.end())
                 {
-                    // This message is either not intended for us, or contains
-                    // wildcard characters.  Send to all available interfaces.
+                    JrDebug << "Trying to forward message from " << msg->getSourceId().val <<
+                        " to " << msg->getDestinationId().val << " (seq " <<
+                        msg->getSequenceNumber() << ")\n";
                     for ( std::list<Transport*>::iterator tport = _transports.begin(); 
                         tport != _transports.end(); ++tport)
                           (*tport)->sendMsg(*msg);
