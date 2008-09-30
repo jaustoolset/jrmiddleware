@@ -215,6 +215,7 @@ public:
     // Set the packing mode (little versus big endian)
     enum PackMode { LittleEndian, BigEndian };
     void setPackMode(enum PackMode mode) { pack_mode = mode; }
+    enum PackMode getPackMode() { return pack_mode; }
 
     // Access the raw data for message passing
     unsigned short getArchiveLength() { return data_length; }
