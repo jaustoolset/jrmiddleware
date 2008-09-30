@@ -5,14 +5,23 @@
  * @author    Woody English, DeVivo AST, Inc. 
  * @date      2008/08/08
  *
- * @attention Copyright (C) 2008
- * @attention DeVivo AST, Inc.
- * @attention All rights reserved
+ *  Copyright (C) 2008. DeVivo AST, Inc
  *
- * @revision history
- * 2008/08/08 Woody English. used Dave's test code for characterization test starting point
- * 2008/08/25 RWE, set priority of echo/responder higher for windows execution
- *                 replaced usage of function time with function clock
+ *	This program is free software: you can redistribute it and/or modify  it 
+ *  under the terms of the Jr Middleware Open Source License which can be 
+ *  found at http://www.jrmiddleware.com/osl.html.  This program is 
+ *  distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+ *  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
+ *  PARTICULAR PURPOSE.  See the Jr Middleware Open Source License for more 
+ *  details.
+ *	
+ *  For more information, please contact DeVivo AST at info@devivoast.com
+ *  or by mail at 2225 Drake Ave, Suite 2, Huntsville, AL  35805.
+ *
+ *  The Jr Middleware Open Source License does not permit incorporating your 
+ *  program into proprietary programs. If this is what you want to do, 
+ *  use the Jr Middleware Commercial License. More information can be 
+ *  found at: http://www.jrmiddleware.com/licensing.html.
  ************************************************************************
  */
 
