@@ -25,7 +25,7 @@ const unsigned char GuaranteeDelivery = 0x01;
 const unsigned char ServiceConnection = 0x02;
 const unsigned char ExperimentalFlag  = 0x04;
 
-#ifndef WINDOWS
+#if !(defined WINDOWS) && !(defined WIN32)
 #define _stdcall
 #endif
 
