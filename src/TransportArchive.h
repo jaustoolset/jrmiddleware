@@ -65,13 +65,19 @@ class JUDPArchive : public TransportArchive
     ~JUDPArchive(){}
     void getJausMsgLength( unsigned short& length ) 
     {
-        getValueAt(3, length); 
-        length = ntohs(length);
+        // Msg length is packed Big Endian
+        enum PackMode oldmode = getPackMode();
+        setPackMode(BigEndian);
+        getValueAt(3, length);
+        setPackMode(oldmode);
     }
     void setJausMsgLength( unsigned short length )
     {
-        unsigned short temp = htons( length );
-       *((unsigned short*) &data[3]) = temp;
+        // Msg length is packed Big Endian
+        enum PackMode oldmode = getPackMode();
+        setPackMode(BigEndian);
+        setValueAt(3, length);
+        setPackMode(oldmode);
     }
     char* getJausMsgPtr( ) { return &data[5]; }
     void  setJausMsgData(Archive& msg)
@@ -363,13 +369,19 @@ class JTCPArchive : public TransportArchive
     ~JTCPArchive(){}
     void getJausMsgLength( unsigned short& length ) 
     {
-        getValueAt(1, length); 
-        length = ntohs(length);
+        // Msg length is packed Big Endian
+        enum PackMode oldmode = getPackMode();
+        setPackMode(BigEndian);
+        getValueAt(1, length);
+        setPackMode(oldmode);
     }
     void setJausMsgLength( unsigned short length )
     {
-        unsigned short temp = htons( length );
-       *((unsigned short*) &data[1]) = temp;
+        // Msg length is packed Big Endian
+        enum PackMode oldmode = getPackMode();
+        setPackMode(BigEndian);
+        getValueAt(1, length);
+        setPackMode(oldmode);
     }
     char* getJausMsgPtr( ) { return &data[3]; }
     void removeHeadMsg()
