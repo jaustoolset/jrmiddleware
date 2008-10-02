@@ -53,6 +53,20 @@ void Sleep(unsigned long milliseconds){    usleep(milliseconds * 1000);	}
 #define DEBUG_MODE_VAR	0
 #endif
 
+// Return the current time (in milliseconds).
+// This is defined in OS.h, but the Windows DLL does
+// not expose the unmangled function.
+unsigned long GetTimestamp()
+{
+#ifdef WINDOWS
+    return (unsigned long)(GetTickCount());
+#else
+    struct timeval tv; struct timezone tz;
+    gettimeofday(&tv, &tz);
+    return (tv.tv_sec*1000 + (unsigned long)(tv.tv_usec/1000));
+#endif
+}
+
 // Define the path name for the config file
 #define CONFIG_PATH_NAME ""
 
@@ -97,7 +111,7 @@ static void handle_exit_signal( int signum ){			exit_flag = 1;				}
 	int num_msgs            = LOOPY;
 	int verbose				= 0;
 
-	clock_t starttime, endtime;
+	long starttime, endtime;
 	double totalTime =0.0;
 
 /*     ----------     W H A T    T E S T     ----------     */
@@ -122,13 +136,15 @@ char* whatTest(int testid)				//returns a text string description of the test id
 /*     ----------     S T A R T   T I M E     ----------     */
 void startTime()
 {
-	starttime=clock();
+	starttime=GetTimestamp();
+	//printf("Start Time: %ld\n", starttime);
 }
 /*     ----------     E L A P S E D   T I M E     ----------     */
 void showElapsedTime()
 {
-	endtime=clock();
-	double elapsedTime = (double)((endtime-starttime)/CLOCKS_PER_SEC);
+	endtime=GetTimestamp();
+	//printf("End time: %ld\n", endtime);
+	double elapsedTime = ((double)(endtime-starttime)/1000.0); // in seconds
 	printf("Summary: %s\n", whatTest(test)); 
 	printf(" -----------------------------------------------\n");
 	printf("    Elapsed Time            =	%2.4f seconds   ( %2.4f minutes )\n", elapsedTime, elapsedTime/60.0 );
@@ -145,8 +161,8 @@ void showElapsedTime()
 	printf("         \n");
 	totalErrorsDetected += totalMsgsSent-totalMsgsRcvd; //account for messages not returned
 	printf("    %2.4f percent failure rate  \n", (float)(totalErrorsDetected)/(float)(totalMsgsSent)*(100.0)  );
-	printf("    %3.6f average round trip latency in milliseconds per message \n", (totalTime/CLOCKS_PER_SEC / (float)totalMsgsSent )*1000);
-	printf("            where Total Snd/Rcv time = %3.6f ms & Ticks/Sec = %ld \n", totalTime, CLOCKS_PER_SEC );
+	printf("    %3.6f average round trip latency in milliseconds per message \n", (totalTime / (float)totalMsgsSent ));
+	printf("            where Total Snd/Rcv time = %3.6f ms  \n", totalTime );
 }
 /*     ----------     S H O W   H E L P     ----------     */
 void showHelp()
@@ -304,7 +320,7 @@ JrErrorCode sender( int handle, unsigned long myid, unsigned long dest, unsigned
 	*((int*) &buffer[14]) = htonl(flags);
 
 	DPRINTF("%ld SND: src=%ld, dest=%ld, id=%ld, size=%ld, priority=%ld, flags=%ld\n", totalMsgsSent, myid, dest, msg_id, dsize, priority, flags);
-	clock_t sndTime=clock();
+	long sndTime=GetTimestamp();
 	*((long*) &buffer[18]) = htonl((long)sndTime);
 	return( JrSend(handle, dest, msg_id, dsize, buffer, priority, flags) );
 }
@@ -326,7 +342,7 @@ void score(int handle, unsigned long myid, unsigned long dest)
 		JrErrorCode ret = JrReceive(handle, &sender, &msg_id, &buffersize, buffer, &priority, &flags);
         if (ret == Ok)
 		{   
-			long rcvTime=(long)clock();
+			long rcvTime=(long)GetTimestamp();
 			// Pull off the data that was embedded in the message.
 
 			int msgcount = ntohl(*((int*) buffer));
@@ -336,8 +352,10 @@ void score(int handle, unsigned long myid, unsigned long dest)
 			int sflags = ntohl(*((int*) &buffer[14]));
 			long sndTime = ntohl(*((long*) &buffer[18]));
 
-			double age = (( ((double)(rcvTime-sndTime)) / CLOCKS_PER_SEC) *1000.0);
+			double age = rcvTime-sndTime;
 			totalTime += age;
+			if ((verbose)||( DEBUG_MODE_VAR ))
+			    printf("snd: %ld, rcv: %ld, age: %g, total: %g\n", sndTime, rcvTime, age, totalTime);
 
 			//show the echo with return values from jr API call
 			//DPRINTF("%ld RCV: source=%ld, dest=%ld, msg_id=%ld, size=%ld, priority=%ld, flags=%ld\n", totalMsgsRcvd, sender, myid, msg_id, buffersize, priority, flags);
