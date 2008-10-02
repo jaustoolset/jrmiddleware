@@ -94,6 +94,7 @@ static void handle_exit_signal( int signum ){			exit_flag = 1;				}
 	int outOfSequenceMsgs	= 0;
 	int ackFailures			= 0;
 	int delay_t				= SLEEP_TIME;
+	int num_msgs            = LOOPY;
 	int verbose				= 0;
 
 	clock_t starttime, endtime;
@@ -150,7 +151,7 @@ void showElapsedTime()
 /*     ----------     S H O W   H E L P     ----------     */
 void showHelp()
 {
-	printf("Usage: <my id> <dest id> <test: optional> <delay: optional> <verbose: optional>\n");
+	printf("Usage: <my id> <dest id> <test: optional> <delay: optional> <num messages: optional> <verbose: optional>\n");
 	printf("----------------------------------------------------------------------------\n");
 	printf("<my id>    A unique (for your network) identifier for this JR node.\n");
 	printf("<dest id>  A the identifier for the node you want to test against.\n");
@@ -168,6 +169,8 @@ void showHelp()
 	printf("      9 - Echo Responder(Swap SRC & DEST and Return)\n");
 	printf("<delay>    Command the sleep time between message sends (priority sends exluded).\n");
 	printf("           The default is SLEEP_TIME (above).\n");
+	printf("<num msgs> The number of messages sent per test\n");
+	printf("           The default is LOOPY (above).\n");
 	printf("<verbose>  Any value other than 0 will show additional detail.\n");
 	printf("           The default is 0 (not verbose).\n");
 	printf("----------------------------------------------------------------------------\n");
@@ -175,8 +178,8 @@ void showHelp()
 	printf("Typical: jr-char1 2 3 0  /* This ID 2 sends to ID 3 messages for all tests.      */\n");
 	printf("         jr-char1 3 2    /* On another machine | process be the echo-responder.  */\n");
 	printf("\n");
-	printf("Debug:   jr-char1 2 3 0 50 1 /* ID 2 sends to ID 3 messages for all tests.      */\n");
-	printf("         jr-char1 3 2 9 50 1 /* On another machine | process be the echo-responder.  */\n");
+	printf("Debug:   jr-char1 2 3 0 50 100 1 /* ID 2 sends to ID 3 messages for all tests.      */\n");
+	printf("         jr-char1 3 2 9 50 100 1 /* On another machine | process be the echo-responder.  */\n");
 	printf("\n");
 	printf("press ENTER to continue...\n");
 	getchar();
@@ -209,10 +212,17 @@ void parseCmdLine(int argc, char* argv[])
         v >> delay_t;
     }
 
-    // Get the command line argument for verbose option
+	// Get the command line argument for number of messages
     if (argc > 5)
     {
-        std::stringstream w; w << argv[5];
+        std::stringstream v; v << argv[5];
+        v >> num_msgs;
+    }
+
+    // Get the command line argument for verbose option
+    if (argc > 6)
+    {
+        std::stringstream w; w << argv[6];
         w >> verbose;
     }
 }
@@ -369,7 +379,7 @@ void priorityTest(int handle, unsigned long myid, unsigned long dest)
 	unsigned short msg_id   = 1; 
 	int flags = ExperimentalFlag;
 
-    for (int i=0; i<LOOPY; i++)  // Execute defined number of messages
+    for (int i=0; i<num_msgs; i++)  // Execute defined number of messages
     {
 		if(exit_flag)break;
 		for (int priority=0; priority<4; priority++) // Cycle through priorities 0 to 3
@@ -400,7 +410,7 @@ void acknakTest(int handle, unsigned long myid, unsigned long dest)
 	int priority = 6;
 	int flags = ExperimentalFlag | GuaranteeDelivery;
 
-    for (int i=0; i<LOOPY; i++)  // Execute defined number of messages
+    for (int i=0; i<num_msgs; i++)  // Execute defined number of messages
     {
 		if(exit_flag)break;
 		// Send a message of the given size, with a counter and size element
@@ -428,7 +438,7 @@ void simpleTimeTest(int handle, unsigned long myid, unsigned long dest)
 	int flags = ExperimentalFlag;
 	int cycle = 0;
 
-    for (int i=0; i<LOOPY; i++)  // Execute defined number of messages
+    for (int i=0; i<num_msgs; i++)  // Execute defined number of messages
     {
 		if(exit_flag)break;
 				
@@ -472,7 +482,7 @@ void hardTimeTest(int handle, unsigned long myid, unsigned long dest)
 	int flags = ExperimentalFlag;
 	int cycle = 0;
 
-    for (int i=0; i<LOOPY; i++)  // Execute defined number of messages
+    for (int i=0; i<num_msgs; i++)  // Execute defined number of messages
     {
 		if(exit_flag)break;
 				
@@ -536,7 +546,7 @@ int main(int argc, char* argv[])
     signal( SIGTERM, handle_exit_signal );
     signal( SIGABRT, handle_exit_signal );
 
-	printf("SLEEP TIME = %ld, Loops/Test = %d (x4 for priority), Debug Mode = %s \n", SLEEP_TIME, LOOPY, DEBUG_MODE_TEXT);
+	printf("SLEEP TIME = %ld, Loops/Test = %d (x4 for priority), Debug Mode = %s \n", delay_t, num_msgs, DEBUG_MODE_TEXT);
 	switch (test) 	// run some tests...
 	{
 		case ALL_TESTS:
