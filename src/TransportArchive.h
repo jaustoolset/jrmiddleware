@@ -380,7 +380,7 @@ class JTCPArchive : public TransportArchive
         // Msg length is packed Big Endian
         enum PackMode oldmode = getPackMode();
         setPackMode(BigEndian);
-        getValueAt(1, length);
+        setValueAt(1, length);
         setPackMode(oldmode);
     }
     char* getJausMsgPtr( ) { return &data[3]; }
