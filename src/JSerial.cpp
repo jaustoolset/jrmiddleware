@@ -188,7 +188,7 @@ Transport::TransportError JSerial::configureLink()
     options.c_cflag |= CS8;
 
     // set the parity
-    options.c_iflag &= ~(INPCK | ISTRIP | IGNPAR | PARMRK | ICRNL);
+    options.c_iflag &= ~(INPCK | ISTRIP | IGNPAR | PARMRK );
     options.c_cflag &= ~(PARENB | PARODD);
     if (JrStrCaseCompare(parity, "odd"))
     {
@@ -222,11 +222,11 @@ Transport::TransportError JSerial::configureLink()
         options.c_iflag &= ~(IXON | IXOFF | IXANY);
     }
 
-    // enable raw output (this prevent interpretation of
+    // enable raw mode (this prevent interpretation of
     // the data stream for things line CR-LR
     options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG | IEXTEN);
     options.c_oflag &= ~(OPOST | ONLCR); 
-    options.c_iflag |= (IGNBRK | IGNCR);
+    options.c_iflag &= ~(IGNBRK | IGNCR | INLCR | BRKINT | ICRNL);
 
     // set the timing (no wait)
     options.c_cc[VTIME] = 0;
