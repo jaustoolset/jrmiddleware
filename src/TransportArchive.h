@@ -254,7 +254,7 @@ class JSerialArchive : public TransportArchive
         // Verify that the packet matches the given length
         unsigned short packetLength = 0;
         getValueAt(3, packetLength);
-        if (packetLength != (getArchiveLength() - 13 - addressSize))
+        if (packetLength > (getArchiveLength() - 13 - addressSize))
         {
             JrDebug << "Invalid serial packet (invalid size: " << packetLength <<
                 " versus " << getArchiveLength() << ")\n";
@@ -343,6 +343,7 @@ class JSerialArchive : public TransportArchive
                 // now insert the DLE
                 data[i] = 0x10;
                 data_length += 1;
+				JrDebug << "Padding extra DLE at byte " <<i<<std::endl;
 
                 // If we inserted an element before the DLE-SOH pair,
                 // we need to shift our expectations of where
