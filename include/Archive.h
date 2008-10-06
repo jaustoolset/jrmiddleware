@@ -244,7 +244,7 @@ inline void Archive::printArchive(int size)
     JrFull << "Archive: ";
     int max_print = (size > data_length) ? data_length : size;
     for (int i=0; i < max_print; i++)
-        out << "  0x" << (unsigned short) *(data+i);
+		out << "  0x" << std::hex <<(unsigned int)((char) *(data+i))<<std::dec;
     out << std::endl;
 }
 
