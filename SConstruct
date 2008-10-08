@@ -43,4 +43,3 @@ Export('baseEnv')
 # Build the source tree
 SConscript('src/SConscript', build_dir='src/obj')
 SConscript('test/SConscript', build_dir='test/obj')
-SConscript('JCTS_test/SConscript', build_dir='JCTS_test/obj')
