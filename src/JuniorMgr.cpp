@@ -629,5 +629,10 @@ JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
     config.getValue("MaxAckNakRetries", _max_retries);
     config.getValue("AckTimeout", _ack_timeout);
     config.getValue("MTU_Size", _max_msg_size);
+	if (_max_msg_size > 4079)
+	{
+		JrWarn << "MTU_Size cannot exceed 4079 bytes.  Setting MTU_Size=4079\n";
+		_max_msg_size = 4079;
+	}
     return Ok;
 }
