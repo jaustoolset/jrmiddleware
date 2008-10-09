@@ -34,5 +34,5 @@ documented.
 The Windows installation of "Jr" includes all pre-built executables and libraries 
 necessary to integrate the API into your project immediately.  For Linux 
 installations, or Windows users who want to compile their own changes, please 
-see BUILD.txt.
+see "Compiling Junior.pdf" in the documentation directory.
 
