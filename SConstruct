@@ -31,7 +31,6 @@ if os.name == "nt":
    baseEnv.Append( CPPPATH = [baseEnv['ENV']['SDKPATH']+"/Include"] )
    baseEnv.Append( LIBPATH = [baseEnv['ENV']['SDKPATH']+"/Lib"] )
    baseEnv.Append( LINKFLAGS = ['/DEFAULTLIB:"WSock32.Lib"'] )
-   baseEnv['INSTALL_BINDIR'] = '#winbin'
 
 # When building for posix-compliant systems, we need the pthread_create library
 if os.name == "posix":
