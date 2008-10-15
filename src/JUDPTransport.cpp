@@ -136,8 +136,12 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     for (addy = _interfaces.begin(); addy != _interfaces.end(); ++addy)
     {
         mreq.imr_interface.s_addr = *addy;
-        setsockopt (_socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, 
-            (const char*) &mreq, sizeof(mreq));
+        if (setsockopt (_socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, 
+            (const char*) &mreq, sizeof(mreq)) != 0)
+			JrError << "Error joining multicast group : " << getSocketError << std::endl;
+
+		JrInfo << "Found network interface: " << 
+			inet_ntoa(*(in_addr*) &mreq.imr_interface.s_addr);
     }
 
     // UDP sockets support run-time discovery.  It's also possible, however,
@@ -374,50 +378,29 @@ Transport::TransportError JUDPTransport::broadcastMsg(Message& msg)
     dest.sin_addr.s_addr = _multicastAddr.addr;
     dest.sin_port = _multicastAddr.port;
 
-    // If the local node only has 1 ethernet inteface, send on the default.
-    if (_interfaces.size() < 2)
+    // Send message on all available interfaces
+    std::list<unsigned long>::iterator iter;
+    for (iter = _interfaces.begin(); iter != _interfaces.end(); ++iter)
     {
+        struct in_addr sockAddr;
+        sockAddr.s_addr = *iter;
+        setsockopt (_socket, IPPROTO_IP, IP_MULTICAST_IF, 
+            (const char*) &sockAddr, sizeof(sockAddr));
+
+        // Lastly, send the message.
         if (sendto(_socket, payload->getArchive(), payload->getArchiveLength(),
-                   0, (struct sockaddr*) &dest, sizeof(dest)) < 0 )
+                   0, (struct sockaddr*) &dest, sizeof(dest)) < 0)
         {
-            JrError << "Failed to broadcast UDP message to " <<
-                inet_ntoa( *(struct in_addr*) &dest.sin_addr.s_addr ) << 
+            JrError << "Failed to broadcast UDP message on interface " <<
+                inet_ntoa( *(struct in_addr*) &sockAddr.s_addr ) <<
                 ".  Error: " << getSocketError << std::endl;
             ret = Failed;
         }
         else
         {
             JrDebug << "Broadcasted " << payload->getArchiveLength() <<
-                " bytes to " << inet_ntoa( *(struct in_addr*) &dest.sin_addr.s_addr ) 
+                " bytes on interface " << inet_ntoa( *(struct in_addr*) &sockAddr.s_addr ) 
                 << std::endl;
-        }
-    }
-    // Otherwise, send on all available interfaces
-    else
-    {
-        std::list<unsigned long>::iterator iter;
-        for (iter = _interfaces.begin(); iter != _interfaces.end(); ++iter)
-        {
-            struct in_addr sockAddr;
-            sockAddr.s_addr = *iter;
-            setsockopt (_socket, IPPROTO_IP, IP_MULTICAST_IF, 
-                (const char*) &sockAddr, sizeof(sockAddr));
-
-            // Lastly, send the message.
-            if (sendto(_socket, payload->getArchive(), payload->getArchiveLength(),
-                       0, (struct sockaddr*) &dest, sizeof(dest)) < 0)
-            {
-                JrError << "Failed to broadcast UDP message on interface " <<
-                    inet_ntoa( *(struct in_addr*) &sockAddr.s_addr ) <<
-                    ".  Error: " << getSocketError << std::endl;
-                ret = Failed;
-            }
-            else
-            {
-                JrDebug << "Broadcasted " << payload->getArchiveLength() <<
-                    " bytes on interface " << inet_ntoa( *(struct in_addr*) &sockAddr.s_addr ) 
-                    << std::endl;
-            }
         }
     }
 
