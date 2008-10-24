@@ -57,8 +57,6 @@ int baud2Enum(int baud)
 {
     switch (baud)
     {
-        case 921600: return B921600;
-        case 460800: return B460800;
         case 230500: return B230400;
         case 115200: return B115200;
         case  57600: return B57600;

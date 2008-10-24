@@ -74,7 +74,7 @@ void DeVivo::Junior::JrSpawnProcess(std::string path, std::string arg)
     // For Unix, we need to fork and manually start the new process
     // First check for existence of the Junior RTE
     char cmd[50];
-    sprintf(cmd, "ps -e | grep '%s'\0", path.c_str());
+    sprintf(cmd, "ps -e | grep '%s' | grep -v 'grep' >> /dev/null\0", path.c_str());
     int ret = system(cmd);
     if (ret != 0)
     {

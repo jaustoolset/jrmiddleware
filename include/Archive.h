@@ -27,7 +27,6 @@
 #ifndef  __JAUS_ARCHIVE_H
 #define  __JAUS_ARCHIVE_H
 
-#include <malloc.h>
 #include <iostream>
 #include <math.h>
 #include "Types.h"

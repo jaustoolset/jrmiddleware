@@ -292,8 +292,7 @@ Transport::TransportError JrSocket::initialize(std::string config_file)
     memset(addr.sun_path, 0, sizeof(addr.sun_path));
     memcpy(addr.sun_path, s.str().c_str(), s.str().length());
     unlink(addr.sun_path);
-    int len = s.str().length() + sizeof(addr.sun_family);
-    if (bind(sock, (struct sockaddr *)&addr, len) != 0)
+    if (bind(sock, (struct sockaddr *)&addr, sizeof(struct sockaddr_un)) != 0)
     {
 
         JrError << "Bind failed for local socket (" << s.str() << ").  errno=" <<
