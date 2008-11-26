@@ -55,9 +55,8 @@ protected:
     std::list<unsigned long> _interfaces;
     char                     _compatibilityMode;
 
-	// Internal function to handle different header versions
-	TransportError JUDPTransport::broadcastMsg(Message& msg,
-											   MsgVersion version);
+    // Internal function to handle different header versions
+    TransportError broadcastMsg(Message& msg, MsgVersion version);
 
 };
 }} // namespace DeVivo::Junior
