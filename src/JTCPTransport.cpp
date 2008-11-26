@@ -55,7 +55,8 @@ JTCPTransport::JTCPTransport():
     _address_map(),
     _connectionsList(),
     _listen_socket(0),
-    _exit_flag(false)
+    _exit_flag(false),
+	_compatibilityMode(0)
 {
 }
 
@@ -78,6 +79,7 @@ Transport::TransportError JTCPTransport::initialize( std::string filename )
     config.getValue("MaxBufferSize", buffer_size);
     std::string address_book;
     config.getValue("TCP_AddressBook", address_book);
+	config.getValue("CompatibilityMode", _compatibilityMode);
 
 #ifdef WINDOWS
     // Must initialize the windows socket library before using
@@ -184,8 +186,22 @@ Transport::TransportError JTCPTransport::sendMsg(Message& msg)
         // debug
         JrDebug << "Opening TCP connection to " << destAddr.toString() << std::endl;
 
-        // Also set the JAUS_ID for this destination.
-        pDest->setJausId(destId);
+		// Pull the header version out of the address book.  If none is specified,
+		// take a hint from the compatibility mode.
+		MsgVersion version = UnknownVersion;
+	    if (!_address_map.getMsgVersion(destId, version) || 
+			(version == UnknownVersion))
+		{
+			// this is a problem case.  we really should never be here.
+			version = (_compatibilityMode == 1) ? AS5669 : AS5669A;
+			JrWarn << "Unable to determine header version for " << destId.val
+				<< ".  Using: " << VersionEnumToString(version) << std::endl;
+		}
+
+        // Also set the JAUS_ID & version for this destination.
+        pDest->setId(destId);
+		pDest->setAddress(destAddr);
+		pDest->setVersion(version);
     }
 
     // Getting to this point means we have a valid connection object for

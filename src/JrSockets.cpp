@@ -26,6 +26,7 @@
 #include "JrSockets.h"
 #include "ConfigData.h"
 #include "JrLogger.h"
+#include "SocketArchive.h"
 #include <fcntl.h>
 #include <errno.h>
 #include <sstream>
@@ -40,7 +41,7 @@ using namespace DeVivo::Junior;
 
 JrSocket::JrSocket(std::string name):
      sock(),
-     is_connected(false),
+     _is_connected(false),
      _map(),
      _socket_name(name)
 {
@@ -100,21 +101,21 @@ void JrSocket::openResponseChannel(Message* msg)
         std::stringstream s; s << msg->getSourceId().val;
         HANDLE source = OpenMailslot(s.str());
         if (source != INVALID_HANDLE_VALUE) 
-            _map.addAddress(msg->getSourceId(), source);
+            _map.addElement(msg->getSourceId(), source, AS5669);
     }
 #else
     // For Unix, we just use the ID as the name of the socket.
     // The AddressMap class will prevent duplicates.
     std::stringstream s; s << SOCK_PATH; s << msg->getSourceId().val;
-    _map.addAddress(msg->getSourceId(), s.str());
+    _map.addElement(msg->getSourceId(), s.str(), AS5669);
 #endif
 }
 
 Transport::TransportError JrSocket::sendMsg(Message& msg, SocketId sockname)
 {
     // Serialize the message before sending it.
-    Archive archive;
-    msg.pack(archive);
+    SocketArchive archive;
+    archive.pack(msg);
 
     // Send to the given socket
 #ifdef WINDOWS
@@ -142,10 +143,10 @@ Transport::TransportError JrSocket::sendMsg(Message& msg)
 
     // If the socket is connected, the endpoint is pre-specified.
     // We can send the archive without much fuss.
-    if (is_connected)
+    if (_is_connected)
     {
         // Send it to the connected socket
-        result = sendMsg(msg, connected_dest);
+        result = sendMsg(msg, _connected_dest);
     }
     else
     {
@@ -153,18 +154,17 @@ Transport::TransportError JrSocket::sendMsg(Message& msg)
         // specified in the message may contain wildcard characters.  We need to loop
         // through all known destinations, sending to any that match (except the source). 
         JAUS_ID dest = msg.getDestinationId();
-        for (int i = 0; i < _map.getList().size(); i++)
+		for (int i = 0; i < _map.getList().size(); i++)
         {
-            if ((msg.getDestinationId() == _map.getList()[i].first) )
-                //&&(msg.getSourceId() != _map.getList()[i].first))
+            if (msg.getDestinationId() == _map.getList()[i]->getId())
             {
-                msg.setDestinationId(_map.getList()[i].first);
-                result = sendMsg(msg, _map.getList()[i].second);
+                msg.setDestinationId(_map.getList()[i]->getId());
+                result = sendMsg(msg, _map.getList()[i]->getAddress());
 
                 // If we failed to send to this destination, remove
                 // it from our map.
                 if (result == Failed)
-                    removeDestination(_map.getList()[i].first);
+                    removeDestination(_map.getList()[i]->getId());
             }
         }
 
@@ -180,9 +180,8 @@ Transport::TransportError JrSocket::recvMsg(MessageList& msglist)
     Transport::TransportError ret = NoMessages;
 
     // Recv the message into a finite sized buffer
-    char buffer[4096];
+    char buffer[5000];
     int bytes = 0;
-    //int counter = 0;
 
     // Check the recv port in a loop, exiting only when we have
     // no messages in the buffer or we've received 10 messages.
@@ -193,7 +192,7 @@ Transport::TransportError JrSocket::recvMsg(MessageList& msglist)
  
         // Read the mailslot as if it's a file descriptor
         bool fSuccess; DWORD bytesread;
-        fSuccess = ReadFile( sock, buffer, 4096, &bytesread, NULL);  
+        fSuccess = ReadFile( sock, buffer, 5000, &bytesread, NULL);  
         if (!fSuccess) break;
         bytes = bytesread;
 
@@ -210,7 +209,7 @@ Transport::TransportError JrSocket::recvMsg(MessageList& msglist)
         memset(addr.sun_path, 0, sizeof(addr.sun_path));
         addr.sun_family = AF_UNIX;
         int addr_len = sizeof(struct sockaddr_un);
-        bytes = recvfrom(sock, buffer, 4096, 0, 
+        bytes = recvfrom(sock, buffer, 5000, 0, 
                          (struct sockaddr*)&addr, 
                          (socklen_t*) &addr_len);
 
@@ -220,16 +219,16 @@ Transport::TransportError JrSocket::recvMsg(MessageList& msglist)
         if (bytes <= 0) break;
  
         // Now that we have a datagram in our buffer, unpack it.
-        Archive archive;
+        SocketArchive archive;
         archive.setData(buffer, bytes);
 
         // And unpack it...
         Message* msg = new Message();
-        msg->unpack(archive);
+        archive.unpack(*msg);
 
         // If we're not a connected socket, open a response
         // channel to the sender so we can talk to it later.
-        if (!is_connected) openResponseChannel(msg);
+        if (!_is_connected) openResponseChannel(msg);
 
         // Add the message to the MessageList and change the return value
         msglist.push_back(msg);
@@ -244,7 +243,7 @@ Transport::TransportError JrSocket::broadcastMsg(Message& msg)
     Transport::TransportError result = AddrUnknown;
 
     // Connected sockets send to a single destination only.
-    if (is_connected)
+    if (_is_connected)
     {
         sendMsg(msg);
     }
@@ -252,16 +251,17 @@ Transport::TransportError JrSocket::broadcastMsg(Message& msg)
     {
         // Loop through all known destinations, sending the message to
         // each socket that matches the destination (including wildcards).
-        for (int i = 0; i < _map.getList().size(); i++)
+        JAUS_ID dest = msg.getDestinationId();
+		for (int i = 0; i < _map.getList().size(); i++)
         {
-            if ((msg.getDestinationId() == _map.getList()[i].first) &&
-                (msg.getSourceId() != _map.getList()[i].first))
-                result = sendMsg(msg, _map.getList()[i].second);
+            if ((msg.getDestinationId() == _map.getList()[i]->getId()) &&
+                (msg.getSourceId() != _map.getList()[i]->getId()))
+                result = sendMsg(msg, _map.getList()[i]->getAddress());
 
             // If we failed to send to this destination, remove
             // it from our map.
             if (result == Failed)
-                removeDestination(_map.getList()[i].first);
+                removeDestination(_map.getList()[i]->getId());
         }
     }
     return Ok;
@@ -321,14 +321,14 @@ Transport::TransportError JrSocket::setDestination(std::string destination)
     // Connect to the given endpoint
     
 #ifdef WINDOWS
-    connected_dest = OpenMailslot(destination);
-    if (connected_dest == INVALID_HANDLE_VALUE) return Failed;
+    _connected_dest = OpenMailslot(destination);
+    if (_connected_dest == INVALID_HANDLE_VALUE) return Failed;
 #else
     std::stringstream name; name << SOCK_PATH; name << destination;
-    connected_dest = name.str();
+    _connected_dest = name.str();
 #endif
 
-    is_connected = true;
+    _is_connected = true;
     return Transport::Ok;
 }
 
@@ -343,6 +343,6 @@ Transport::TransportError JrSocket::removeDestination(JAUS_ID id)
 #endif
 
     // Remove this destination from the map
-    _map.removeAddress(id);
+    _map.removeElement(id);
     return Transport::Ok;
 }

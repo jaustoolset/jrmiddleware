@@ -33,12 +33,12 @@ API_Files = [
     'JuniorMgr.cpp',
     'OS.cpp',
     'ConfigData.cpp',
+    'JrLogger.cpp',
     'JUDPTransport.cpp',
-    'JTCPTransport.cpp',
-    'TCPConnection.cpp',
     'JSerial.cpp',
     'ChecksumCRC.cpp',
-    'JrLogger.cpp'
+    'TCPConnection.cpp',
+    'JTCPTransport.cpp'
 ]
 
 # Define multiple environments for building and using

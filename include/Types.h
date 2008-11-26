@@ -39,6 +39,22 @@ static unsigned char getByte(unsigned long in, char num)
     return ((unsigned char)(in>>(num*8)));
 }
 
+// versions of the header/footer supported
+typedef enum { UnknownVersion = 0, OPC, AS5669, AS5669A } MsgVersion;
+static std::string VersionEnumToString(MsgVersion v)
+{
+	if (v == OPC) return "OPC";
+	if (v == AS5669) return "AS5669";
+	if (v == AS5669A) return "AS5669A";
+	return "UnknownVersion";
+}
+static MsgVersion VersionStringToEnum(std::string v)
+{
+	if ((v == "OPC") || (v == "opc")) return OPC;
+	if ((v == "AS5669") || (v == "as5669")) return AS5669;
+	if ((v == "AS5669A") || (v == "as5669A")) return AS5669A;
+	return UnknownVersion;
+}
 
 // Types for JAUS_ID.  The JAUS ID is simply an unsigned long
 // but has to watch out for wildcard bytes (0xFF) during

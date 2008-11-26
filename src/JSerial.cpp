@@ -79,8 +79,8 @@ int baud2Enum(int baud)
 // Class definition
 JSerial::JSerial():
    hComm(0),
-   _use_opc(0),
-   previousByteWasDLE(false)
+   previousByteWasDLE(false),
+   _compatibilityMode(0)
 {
 }
 
@@ -100,6 +100,7 @@ Transport::TransportError JSerial::configureLink()
     _config.getValue("SerialStopBits", stopbits);
     unsigned char software_dataflow = 0;
     _config.getValue("SerialSoftwareFlowControl", software_dataflow);
+
 
     // Check for valid parameters
     if ( !JrStrCaseCompare(parity, "odd") && 
@@ -243,11 +244,12 @@ Transport::TransportError JSerial::initialize( std::string filename )
     // Parse the config file
     _config.parseFile(filename);
 
-    // Pull the com port name
+    // Pull the com port name and compatbility mode
     std::string portname = "COM1";
     _config.getValue("SerialPortName", portname);
     portname = SERIAL_PATH + portname;
     JrInfo << "Serial: Using port " << portname << std::endl;
+	_config.getValue("CompatibilityMode", _compatibilityMode);
 
 #ifdef WINDOWS
     // Open a file for reading/writing to the port
@@ -279,18 +281,34 @@ Transport::TransportError JSerial::sendMsg(Message& msg)
     // Only send messages if the destination is known to us
     for (int i = 0; i < _map.getList().size(); i++)
     {
-        if ((_map.getList()[i].first == msg.getDestinationId()) &&
-            (_map.getList()[i].first != msg.getSourceId()))
+        if ((_map.getList()[i]->getId() == msg.getDestinationId()) &&
+            (_map.getList()[i]->getId() != msg.getSourceId()))
         {
+			// If we've already communicated with this endpoint, we should
+			// know the header version it wants.  Otherwise, use a hint
+			// from CompatibilityMode.
+			MsgVersion version = UnknownVersion;
+			if (!_map.getMsgVersion(_map.getList()[i]->getId(), version) || 
+				(version == UnknownVersion))
+			{
+				// this is a problem case.  we really should never be here.
+				version = (_compatibilityMode == 1) ? AS5669 : AS5669A;
+				JrWarn << "Unable to determine header version for " << 
+					_map.getList()[i]->getId().val << ".  Using: " <<
+				    VersionEnumToString(version) << std::endl;
+			}
+
             // Send to this entry
-            ret = sendMsg(msg, _map.getList()[i].second);
+            ret = sendMsg(msg, _map.getList()[i]->getAddress(), version);
         }
     }
 
     return ret;
 }
 
-Transport::TransportError JSerial::sendMsg(Message& msg, HANDLE handle)
+Transport::TransportError JSerial::sendMsg(Message& msg, 
+										   HANDLE handle,
+										   MsgVersion version)
 {
     // Assume the best...
     Transport::TransportError result = Ok;
@@ -303,14 +321,8 @@ Transport::TransportError JSerial::sendMsg(Message& msg, HANDLE handle)
     //
     // Now pack the message for network transport 
     //
-    Archive msg_archive;
-    msg.pack(msg_archive);
-    payload.setJausMsgData( msg_archive );
-
-    // Ugh.  5669 requires prefacing any DLE-equivalent characters
-    // with a DLE marker.  This is similar to a "\\" marker for
-    // when printing a slash through printf.  Manually pad the archive.
-    payload.finalizePacket();
+    JSerialArchive archive;
+	archive.pack(msg, version);
 
 #ifdef WINDOWS
 
@@ -436,10 +448,16 @@ Transport::TransportError JSerial::recvMsg(MessageList& msglist)
 
 Transport::TransportError JSerial::broadcastMsg(Message& msg)
 {
+	TransportError ret = Ok;
+
     // Unlike a send, the broadcast does not check for a valid
     // destination field.  It simply pushes everything across
-    // the port using the default connection.
-    return sendMsg(msg, hComm);
+    // the port using the default connection.  The only tricky
+	// part is managing the header version based on the 
+	// user's setting for CompatibilityMode.
+    if (_compatibilityMode != 0) ret = sendMsg(msg, hComm, AS5669);
+	if (_compatibilityMode != 1) ret = sendMsg(msg, hComm, AS5669A);
+	return ret;
 }
 
 Transport::TransportError JSerial::extractMsgsFromPacket(MessageList& msglist)
@@ -455,28 +473,19 @@ Transport::TransportError JSerial::extractMsgsFromPacket(MessageList& msglist)
     // adding it to the return list.
     while (unusedBytes.isArchiveValid())
     {
-        // If the message length is zero, this message was only a transport
-        // message (probably a Header Compression message).  Nothing more
-        // to do.
-        unusedBytes.getJausMsgLength( jausMsgLength );
-        if ( jausMsgLength != 0 )
-        {
-            // Extract the payload into a message
-            // UGH!! Two copies here.  Need to eliminate this.
-            Archive archive;
-            archive.setData( unusedBytes.getJausMsgPtr(), jausMsgLength );
-            Message* msg = new Message();
-            msg->unpack(archive);
+        // Extract the payload into a message
+        // UGH!! Two copies here.  Need to eliminate this.
+        Message* msg = new Message();
+        unusedBytes.unpack(*msg);
 
-            //
-            // Add the source to the transport discovery map.
-            //
-            _map.addAddress( msg->getSourceId(), hComm );
+        //
+        // Add the source to the transport discovery map.
+        //
+        _map.addElement( msg->getSourceId(), hComm, unusedBytes.getVersion() );
 
-            // Add the message to the list and change the return value
-            JrDebug << "Found valid serial message (size " << jausMsgLength << ")\n";
-            msglist.push_back(msg);
-        }
+        // Add the message to the list and change the return value
+        JrDebug << "Found valid serial message (size " << msg->getDataLength() << ")\n";
+        msglist.push_back(msg);
 
         // Remove this message from the archive, so
         // we can process the next message in the packet.

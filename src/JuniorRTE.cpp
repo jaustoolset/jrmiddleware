@@ -29,19 +29,15 @@
 #include <signal.h>
 #include "ConfigData.h"
 #include "JrSockets.h"
-#include "JUDPTransport.h"
-#include "JTCPTransport.h"
-#include "JSerial.h"
 #include "Transport.h"
+#include "JUDPTransport.h"
+#include "JSerial.h"
+#include "JTCPTransport.h"
 #include "Types.h"
 #include "OS.h"
 #include "JrLogger.h"
 
 using namespace DeVivo::Junior;
-
-// Convenient typedefs
-typedef std::list<unsigned long>     ConnectionList;
-typedef std::list<JAUS_ID>::iterator ConnectionListIter;
 
 // Define a signal handler, so we can clean-up properly
 static int exit_flag = 0;
@@ -111,14 +107,14 @@ int main(int argc, char* argv[])
     // raw unsigned long, rather than the JAUS_ID, so that operator== means 
     // "strictly equal to".  This allows us to detected when a message is for a local
     // client, and a local client only (it contains no wildcard characters).
-    ConnectionList _clients;
+	std::list<unsigned long> _clients;
 
     // Create a list of all supported transports.
     std::list<Transport*> _transports;
     std::list<Transport*>::iterator _iter;
     _transports.push_back(&publicSocket);
 
-    // Create the transports, but don't initialize them unless requested.
+	// Create the transports, but don't initialize them unless requested.
     JUDPTransport udp;
     JTCPTransport tcp;
     JSerial serial;
@@ -169,7 +165,6 @@ int main(int argc, char* argv[])
     {
         JrInfo << "Serial communication deactivated in configuration file\n";
     }
-
 
     // Predefine a list of messages we receive from the transports.
     MessageList msglist;

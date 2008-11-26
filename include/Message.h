@@ -46,13 +46,12 @@ typedef std::pair<unsigned long, Message*> TimeStampedMsg;
 typedef std::list<TimeStampedMsg> TimeStampedMsgList;
 typedef std::list<TimeStampedMsg>::iterator TimeStampedMsgListIter;
 
-
 class Message
 {
 public:
     Message():
-            _code(0),_source(0),_destination(0), _priority(6), 
-            _acknak(0), _control(0),_service_connection(0), _experimental(0), _payload(){}
+            _code(0),_source(0),_destination(0), _priority(6), _acknak(0), 
+			_control(None),_bcast(0), _service_connection(0), _experimental(0), _payload(){}
    ~Message(){}
 
     //
@@ -71,11 +70,20 @@ public:
     JAUS_ID getDestinationId(){return _destination;}
 
     //
-    // Functions for priority handling
+    // Functions for priority handling.  Note that AS5669A
+	// uses a different meaning of priority.  Rather
+	// than a 0-16 value, it uses a 0-3 range.  We need
+	// to map one to the other.
     //
     void setPriority(unsigned char prio){_priority=prio;}
     unsigned char getPriority(){return _priority;}
-
+	void setScaledPriority(unsigned char prio){_priority = (3*prio)+3;}
+	unsigned char getScaledPriority()
+	{
+		if (_priority == 15) return 3;
+		return ((_priority-3)/3);
+	}
+	
     //
     // Functions for ack/nak
     //
@@ -95,10 +103,19 @@ public:
     char getExperimental(){return _experimental;}
 
     //
+    // Functions for broadcast flag
+    //
+    void setBroadcast(char flag){_bcast = flag;}
+    char getBroadcast(){return _bcast;}
+
+    //
     // Functions for data control (large message handling)
     //
-    void setDataControlFlag(char flag){_control=flag;}
-    char getDataControlFlag(){return _control;}
+	typedef enum {None, FirstMsg, MiddleMsg, MiddleResentMsg, LastMsg} DataControlFlag;
+    void setDataControlFlag(DataControlFlag flag){_control=flag;}
+    DataControlFlag getDataControlFlag(){return _control;}
+	char getDataControlFlagAsChar(MsgVersion version);
+	void setDataControlFlagAsChar( char flag, MsgVersion version );
 
     //
     // Functions for sequence number
@@ -114,129 +131,30 @@ public:
     Archive& getPayload(){return _payload;}
 
     //
-    // Functions for encoding/decoding the message into an archive.
+    // Returns the packed length of data (without headers)
     //
-    virtual void pack(Archive& packed_msg);
-    virtual void unpack(Archive& packed_msg);
-
-    //
-    // Returns the packed length of a message (including headers)
-    // or packed length of data (without headers)
-    //
-    unsigned short getMsgLength();
     unsigned short getDataLength();
 
 protected:
 
-    MessageCode    _code;
-    JAUS_ID        _source;
-    JAUS_ID        _destination;
-    unsigned char  _priority;
-    char           _acknak;
-    char           _control;
-    unsigned short _sequence;
-    Archive        _payload;
-    char           _service_connection;
-    char           _experimental;
+    MessageCode     _code;
+    JAUS_ID         _source;
+    JAUS_ID         _destination;
+    unsigned char   _priority;
+    char            _acknak;
+    DataControlFlag _control;
+	char			_bcast;
+    unsigned short  _sequence;
+    Archive         _payload;
+    char            _service_connection;
+    char            _experimental;
 
-    //
-    // Internal function to (un-)pack a JAUS header with standard parameters
-    //
-    virtual void packHdr(Archive& packed_msg);
-    virtual void unpackHdr(Archive& packed_msg);
 };
-
-//
-// Inline function defintions.
-// 
-inline void Message::pack(Archive& packed_msg)
-{
-    // Default implementation packs the header, then the data.
-    packHdr( packed_msg );
-    packed_msg.append( _payload );
-}
-
-inline void Message::unpack(Archive& packed_msg)
-{
-    // Default implementation unpacks the header, then the data.
-    unpackHdr( packed_msg );
-    packed_msg>>_payload;
-}
 
 inline unsigned short Message::getDataLength()
 {
     // Return the length of the payload
     return _payload.getArchiveLength();
-}
-
-inline unsigned short Message::getMsgLength()
-{
-    // The length of the a packed message is simply the
-    // length of packed data plus 16 byte header.
-    return (getDataLength() + 16);
-}
-
-inline void Message::packHdr( Archive& packed_msg )
-{
-    // Pack header as little endian
-    packed_msg.setPackMode( Archive::LittleEndian );
-
-    // Priority and acknowledgement, service connection, experimental
-    char options = _priority | (_acknak << 4) | (_service_connection << 6) | (_experimental << 7);
-    packed_msg << options;
-
-    // Default version is 3.2 (value 2)
-    packed_msg << (char) 2;
-
-    // Next 2 bytes are the command code
-    packed_msg << (unsigned short) _code;
-
-    // Next come the destination and source addresses.
-    packed_msg << _destination.val;
-    packed_msg << _source.val;
-
-    // The data size and data flags represent the next 2 bytes.
-    // Data control flags are the highest 4 bits.
-    packed_msg << ((unsigned short)(getDataLength() | (_control<<12)));
-
-    // Sequence number is zero for single messages
-    packed_msg << _sequence;
-}
-
-inline void Message::unpackHdr( Archive& packed_msg )
-{
-    // Unpack header as little endian
-    packed_msg.setPackMode( Archive::LittleEndian );
-
-    // Rewind to the start of the archive
-    packed_msg.rewind();
-
-    // Pull the priority and ack/nak bits
-    char delivery_options;
-    packed_msg >> delivery_options; // message priority
-    _priority = delivery_options & 0x0F;
-    _acknak   = ((delivery_options & 0x30) >> 4);
-    _service_connection = ((delivery_options & 0x40) >> 6);
-    _experimental = ((delivery_options & 0x80) >> 7);
-
-    // Read (and discard) fields we don't care about...
-    char dummy;
-    packed_msg >> dummy; // version
-
-    // Next 2 bytes are the command code
-    packed_msg >> _code;
-
-    // Next come the destination and source addresses.
-    packed_msg >> _destination.val;
-    packed_msg >> _source.val;
-
-    // The data size and data flags represent the next 2 bytes.
-    unsigned short temp;
-    packed_msg >> temp; // 
-    _control = ((temp >> 12) & 0xF);
-
-    // Sequence number is also two bytes
-    packed_msg >> _sequence;
 }
 
 inline void Message::setPayload(unsigned int size, const char* data)
@@ -251,6 +169,34 @@ inline void Message::getPayload(unsigned int& size, char*& data)
     size = _payload.getArchiveLength();
     data = _payload.getArchive();
 }
+
+inline char Message::getDataControlFlagAsChar(MsgVersion version)
+{
+	// Note the change in values for 5669 versus 5669A
+	if (_control == None) return 0;
+	if (_control == FirstMsg) return 1;
+	if (_control == MiddleMsg) return 2;
+	if (_control == MiddleResentMsg)
+		return ((version == AS5669A) ? 2 : 4);
+	if (_control == LastMsg)
+		return ((version == AS5669A) ? 3 : 8);
+	return 0; // failure case
+}
+
+inline void Message::setDataControlFlagAsChar(char flag,
+											  MsgVersion version)
+{
+	if (flag == 0) _control = None;
+	else if (flag == 1) _control = FirstMsg;
+	else if (flag == 2) _control = MiddleMsg;
+	else if ((flag == 3) && (version == AS5669A)) _control = LastMsg;
+	else if ((flag == 4) && (version != AS5669A)) _control = MiddleResentMsg;
+	else if ((flag == 8) && (version != AS5669A)) _control = LastMsg;
+	return;
+}
+
+
+
 }} // namespace DeVivo::Junior
 
 #endif

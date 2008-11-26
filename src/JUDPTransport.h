@@ -27,9 +27,9 @@
 #define __JAUS_UDP_TRANSPORT_H
 
 #include "Transport.h"
-#include "TransportArchive.h"
-#include "IpAddressBook.h"
+#include "ConnectionList.h"
 #include <sstream>
+#include <map>
 
 namespace DeVivo {
 namespace Junior {
@@ -53,8 +53,11 @@ protected:
     int                      _socket;
     IP_ADDRESS               _multicastAddr;
     std::list<unsigned long> _interfaces;
-    std::map<JAUS_ID, bool>  _format_map;
-    char                     _use_opc;
+    char                     _compatibilityMode;
+
+	// Internal function to handle different header versions
+	TransportError JUDPTransport::broadcastMsg(Message& msg,
+											   MsgVersion version);
 
 };
 }} // namespace DeVivo::Junior

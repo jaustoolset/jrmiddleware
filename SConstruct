@@ -40,8 +40,8 @@ elif baseEnv['PLATFORM'] == 'cygwin':
 elif os.name == "nt":                     
    print "scons: Building for Windows..."
    baseEnv.Append( CCFLAGS = ['-DWINDOWS', '-EHsc','-D_CRT_SECURE_NO_DEPRECATE'])
-   baseEnv.Append( CPPPATH = [baseEnv['ENV']['SDKPATH']+"/Include"] )
-   baseEnv.Append( LIBPATH = [baseEnv['ENV']['SDKPATH']+"/Lib"] )
+   #baseEnv.Append( CPPPATH = [baseEnv['ENV']['SDKPATH']+"/Include"] )
+   #baseEnv.Append( LIBPATH = [baseEnv['ENV']['SDKPATH']+"/Lib"] )
    baseEnv.Append( LINKFLAGS = ['/DEFAULTLIB:"WSock32.Lib"'] )
 
 # When building for posix-compliant systems, we need the pthread_create library

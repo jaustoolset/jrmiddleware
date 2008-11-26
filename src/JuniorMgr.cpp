@@ -25,10 +25,13 @@
  */
 #include "JuniorMgr.h"
 #include "ConfigData.h"
+#include "SocketArchive.h"
 #include <sstream>
 #include <algorithm>
 
 using namespace DeVivo::Junior;
+
+#define minint(a,b) ((a<b)?a:b)
 
 JuniorMgr::JuniorMgr():
     _socket_ptr(NULL)
@@ -141,7 +144,7 @@ void JuniorMgr::checkLargeMsgBuffer()
         }
 
         // If this is the first message of a sequence, try to find the rest of 'em.
-        if (msgIter->second->getDataControlFlag() == 1)
+        if (msgIter->second->getDataControlFlag() == Message::FirstMsg)
         {
             // Search the message list for the next one in the sequence.
             unsigned short msgnum = msgIter->second->getSequenceNumber();
@@ -166,7 +169,8 @@ void JuniorMgr::checkLargeMsgBuffer()
                 // If this message is not the last message in the sequence,
                 // continue the interior "while" loop until we find a missing
                 // message or the true end.
-                if (nextMsg->second->getDataControlFlag() != 8) continue;
+                if (nextMsg->second->getDataControlFlag() != Message::LastMsg) 
+					continue;
 
                 // Getting to this point means we know that all the messages
                 // in a sequence are available.  Reconstruct the original message.
@@ -182,16 +186,9 @@ void JuniorMgr::checkLargeMsgBuffer()
 
                 // Now that we have a complete message, add it to the delivery buffer
                 // and remove it from the unfinished message buffer.
-                if (msgIter->second->getPriority() > JrMaxPriority)
-                {
-                    _buffers[JrMaxPriority].push_back(msgIter->second);
-                    _msg_count++;
-                }
-                else
-                {
-                    _buffers[msgIter->second->getPriority()].push_back(msgIter->second);
-                    _msg_count++;
-                }
+				_buffers[minint(msgIter->second->getPriority(), JrMaxPriority)].
+					push_back(msgIter->second);
+                _msg_count++;
 
                 // Last, we need to erase the first message in the set from 
                 // the large message buffer.  Note that we don't delete
@@ -222,7 +219,7 @@ bool JuniorMgr::addMsgToBuffer(Message* msg)
 
     // If this message is part of a larger set, add it to the
     // "waiting for a complete" message queue.
-    if (msg->getDataControlFlag() != 0)
+    if (msg->getDataControlFlag() != Message::None)
     {
         _largeMsgBuffer.push_back(std::make_pair(JrGetTimestamp(),msg));
         checkLargeMsgBuffer();
@@ -238,14 +235,9 @@ bool JuniorMgr::addMsgToBuffer(Message* msg)
     }
     // Otherwise, put the message in a priority-based buffer, being
     // careful to make sure that the priority is in range.
-    else if (msg->getPriority() > JrMaxPriority)
-    {
-        _buffers[JrMaxPriority].push_back(msg);
-        _msg_count++;
-    }
-    else
-    {
-        _buffers[msg->getPriority()].push_back(msg);
+	else
+	{
+		_buffers[minint(msg->getPriority(), JrMaxPriority)].push_back(msg);
         _msg_count++;
     }
 
@@ -317,9 +309,12 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
         // broken up.
         if (payload_size < size)
         {
-            if (bytes_sent == 0) msg.setDataControlFlag(1);
-            else if ((bytes_sent + payload_size) == size) msg.setDataControlFlag(8);
-            else msg.setDataControlFlag(2);
+            if (bytes_sent == 0) 
+				msg.setDataControlFlag(Message::FirstMsg);
+            else if ((bytes_sent + payload_size) == size) 
+				msg.setDataControlFlag(Message::LastMsg);
+            else 
+				msg.setDataControlFlag(Message::MiddleMsg);
         }
 
         // Send the message to the RTE for distribution
@@ -367,7 +362,8 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
                 // If we have to resend a message that is part of a large data
                 // stream, the data control flags need to be updated.  This 
                 // seems wonky to have to do, but it's part of JAUS.
-                if (msg.getDataControlFlag() == 2) msg.setDataControlFlag(4);
+				if (msg.getDataControlFlag() == Message::MiddleMsg) 
+					msg.setDataControlFlag(Message::MiddleResentMsg);
 
                 // See if it's time to resend the message (or timeout)
                 if ((unsigned long)(JrGetTimestamp() - last_msg_time) > _ack_timeout)
@@ -389,10 +385,10 @@ JrErrorCode JuniorMgr::sendto( unsigned int size, const char* buffer )
 {
     // Put the entire message in an archive, so we can 
     // unmarshall it into a Message object
-    Archive packed_msg;
+    SocketArchive packed_msg;
     packed_msg.setData(buffer, size);
     Message msg;
-    msg.unpack(packed_msg);    
+    packed_msg.unpack(msg);    
 
     // send the message
     _socket_ptr->sendMsg(msg);
@@ -502,8 +498,8 @@ JrErrorCode JuniorMgr::recvfrom( unsigned int* size, char* buffer )
             _msg_count--;
 
             // Return the entire packed message, including the header
-            Archive packed_msg;
-            value->pack(packed_msg);
+            SocketArchive packed_msg;
+            packed_msg.pack(*value);
 
             // Make sure the incoming packet doesn't exceed the buffer
             JrErrorCode ret = Ok;

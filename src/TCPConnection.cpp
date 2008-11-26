@@ -44,7 +44,6 @@ using namespace DeVivo::Junior;
 JTCPConnection::JTCPConnection(int socket):
     _socket(socket),
     _incoming_stream(),
-    _id(0),
     _isStreamActive(false)
 {
 }
@@ -62,9 +61,7 @@ Transport::TransportError JTCPConnection::sendMsg(Message& msg)
 
     // Serialize the message to send.
     JTCPArchive payload;
-    Archive msg_archive;
-    msg.pack(msg_archive);
-    payload.setJausMsgData( msg_archive );
+	payload.pack(msg, _version);
 
     // By default, a JTCPArchive includes the version byte.
     // After we send the first message, however, the version byte is not needed.
@@ -121,18 +118,16 @@ Transport::TransportError JTCPConnection::recvMsg(MessageList& msglist)
     // If we've accrued a valid packet, shape it into a message
     while (_incoming_stream.isArchiveValid())
     {
-        Archive archive;
-        unsigned short jausMsgLength;
-        _incoming_stream.getJausMsgLength(jausMsgLength);
-        archive.setData( _incoming_stream.getJausMsgPtr(), jausMsgLength);
         Message* msg = new Message();
-        msg->unpack(archive);
+		_incoming_stream.unpack(*msg);
 
         // Make sure we record the JAUS_ID of the sender
         if (_id == 0) _id = msg->getSourceId();
 
+		// TO DO VERSION!!!!
+
         // Add the message to the list and change the return value
-        JrDebug << "Found valid TCP message (size " << jausMsgLength << ")\n";
+        JrDebug << "Found valid TCP message (size " << msg->getDataLength() << ")\n";
         msglist.push_back(msg);
         ret = Transport::Ok;
 
@@ -187,7 +182,7 @@ JTCPConnection* JTCPConnectionList::getConnection(JAUS_ID id)
     // to romp through the map manually.
     std::map<int, JTCPConnection*>::iterator iter;
     for (iter = _connections.begin(); iter != _connections.end(); iter++)
-        if (id == iter->second->getJausId()) return iter->second;
+        if (id == iter->second->getId()) return iter->second;
     return NULL;
 }
 

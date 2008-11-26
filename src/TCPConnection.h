@@ -26,9 +26,9 @@
 #ifndef __JAUS_TCP_CONNECTION_H
 #define __JAUS_TCP_CONNECTION_H
 
-#include "TransportArchive.h"
 #include "Transport.h"
-#include "Types.h"
+#include "JTCPArchive.h"
+#include "ConnectionList.h"
 #include <map>
 
 namespace DeVivo {
@@ -37,9 +37,13 @@ namespace Junior {
 
 //
 // A TCPConnection object manages a single TCP connection.
-// Communication is by-directional (sending and receiving)
+// Communication is by-directional (sending and receiving).
+// We inherit from, but extend, the Connection class.  The basic
+// Connection only supports data types (id, address, version)
+// while a TCPConnection provides additional functionality
+// for sending/receiving on a dedicated socket.
 //
-class JTCPConnection
+class JTCPConnection : public Connection<IP_ADDRESS>
 {
 public:
     JTCPConnection(int socket);
@@ -51,14 +55,10 @@ public:
 
     // Data accessors
     int getSocket(){return _socket;}
-    JAUS_ID getJausId(){return _id;}
-    void setJausId(JAUS_ID id){_id = id;}
 
 protected:
-
     int               _socket;
     JTCPArchive       _incoming_stream;
-    JAUS_ID           _id;
     bool              _isStreamActive;
 };
 

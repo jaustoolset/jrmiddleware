@@ -25,6 +25,7 @@
  */
 #include "JUDPTransport.h"
 #include "Message.h"
+#include "JUDPArchive.h"
 #include "ConfigData.h"
 #include "OS.h"
 #include "JrLogger.h"
@@ -47,8 +48,7 @@ JUDPTransport::JUDPTransport():
     _socket(0),
     _multicastAddr(),
     _interfaces(),
-    _format_map(),
-    _use_opc(0)
+    _compatibilityMode(0)
 {
 }
 
@@ -73,7 +73,7 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     config.getValue("MulticastAddr", multicast_addr);
     int buffer_size = 10000;
     config.getValue("MaxBufferSize", buffer_size);
-    config.getValue("UseOPC2.75_Header", _use_opc);
+    config.getValue("CompatibilityMode", _compatibilityMode);
     std::string address_book;
     config.getValue("UDP_AddressBook", address_book);
 
@@ -164,8 +164,7 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
     //
     // Creating a byte stream (payload) for the message
     //
-    OPCArchive opc_payload;
-    JUDPArchive udp_payload;
+    JUDPArchive archive;
     
     //
     // Loop through all known destination, sending to each match.
@@ -173,7 +172,7 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
     for (int i = 0; i < _map.getList().size(); i++)
     {
         // Store a local variable for convenience
-        JAUS_ID id = _map.getList()[i].first;
+        JAUS_ID id = _map.getList()[i]->getId();
 
         // Check this ID against the message's destination
         if ((id == destId) && (msg.getSourceId() != id))
@@ -190,31 +189,32 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
             msg.setDestinationId(id);
 
             //
-            // For each destination, we use the header_map to determine the form
-            // of header being used.  If no entry exists in the map, the
-            // default selection from _use_opc is taken.
-            TransportArchive *payload;
-            if (_format_map.count(id) > 0)
-                payload = (_format_map[id]) ? &opc_payload : (TransportArchive*)&udp_payload;
-            else
-                payload = (_use_opc) ? &opc_payload : (TransportArchive*)&udp_payload;
+            // For each destination, we use information from the last received
+			// message to determine the message version to send.
+			// If no entry exists in the map, the
+            // default selection from _compatibilityMode is taken.
+			MsgVersion version = UnknownVersion;
+		    if (!_map.getMsgVersion(id, version) || (version == UnknownVersion))
+			{
+				// this is a problem case.  we really should never be here.
+				version = (_compatibilityMode == 1) ? AS5669 : AS5669A;
+				JrWarn << "Unable to determine header version for " << id.val
+					<< ".  Using: " << VersionEnumToString(version) << std::endl;
+			}
 
             //
-            // Now pack the message for network transport and append
-            // it on the payload archive.
+            // Now pack the message into the transport archive
             //
-            Archive msg_archive;
-            msg.pack(msg_archive);
-            payload->setJausMsgData( msg_archive );
+			archive.pack(msg, version);
 
             // Create the destination address structure
             struct sockaddr_in dest;
             dest.sin_family = AF_INET;
-            dest.sin_addr.s_addr = _map.getList()[i].second.addr;
-            dest.sin_port = _map.getList()[i].second.port;
+            dest.sin_addr.s_addr = _map.getList()[i]->getAddress().addr;
+            dest.sin_port = _map.getList()[i]->getAddress().port;
             
             // Lastly, send the message.  
-            int val =sendto(_socket, payload->getArchive(), payload->getArchiveLength(),
+            int val = sendto(_socket, archive.getArchive(), archive.getArchiveLength(),
                        0, (struct sockaddr*) &dest, sizeof(dest));
             if (val < 0) 
             {
@@ -223,7 +223,7 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
             }
             else 
             {
-                JrDebug << "Sent " << payload->getArchiveLength() << " bytes on UDP port\n";
+                JrDebug << "Sent " << archive.getArchiveLength() << " bytes on UDP port\n";
                 result = Ok;
             }
         }
@@ -264,85 +264,45 @@ Transport::TransportError JUDPTransport::recvMsg(MessageList& msglist)
         JrDebug << "Read " << result << " bytes on UDP port\n";
 
         // 
-        // Pull off the source IP info for convenience.  Look-up the corresponding
-        // JAUS_ID.
+        // Pull off the source IP info for convenience.  
         //
         IP_ADDRESS sourceAddr( source );
-        JAUS_ID sourceId;
-        _map.getIdFromAddr( sourceId, sourceAddr );
 
         //
         // Getting to this point means we have a message.  
         // Check what type, so we use the appropriate archive.  
         // 
-        bool isOpc = false;
-        TransportArchive *raw_msg = NULL;
-        if (buffer[0] == 1)
-        {
-            JrDebug << "JUDP packet detected.  Valid version\n";
-            raw_msg = new JUDPArchive;
-        }
-        else if (strncmp(buffer, "JAUS01.0", OPC_HeaderSize)==0)
-        {
-            JrDebug << "UDP packet contains OPC header.  Valid version\n";
-            raw_msg = new OPCArchive; 
-            isOpc = true;
-        }
-        else
-        {
-            JrWarn << "Received unknown version on UDP port.  Discarding\n";
-            continue;
-        }
-
-        // Check for allocation problems
-        if (raw_msg == NULL)
-        {
-            JrError << "Unable to allocation memory for incoming UDP packet\n";
-            continue;
-        }
+        JUDPArchive raw_msg;
 
         // Otherwise, set the data from the receive buffer.
-        raw_msg->setData( buffer, result );
+        raw_msg.setData( buffer, result );
 
         // A single packet may have multiple JAUS messages on it, each
         // with there own header compression flags.  We need to parse through
         // the entire packet, remove each message one at a time and
         // adding it to the return list.
-        while (raw_msg->isArchiveValid())
+        while (raw_msg.isArchiveValid())
         {
-            // If the message length is zero, this message was only a transport
-            // message.  Nothing more to do.
-            raw_msg->getJausMsgLength( jausMsgLength );
-            if ( jausMsgLength != 0 )
-            {
-                // Extract the payload into a message
-                // UGH!! Two copies here.  Need to eliminate this.
-                Archive archive;
-                archive.setData( raw_msg->getJausMsgPtr(), jausMsgLength );
-                Message* msg = new Message();
-                msg->unpack(archive);
+            // Extract the payload into a message
+			Message* msg = new Message();
+			raw_msg.unpack(*msg);
 
-                //
-                // Add the source to the transport discovery map.
-                // We also need to remember the format that was used.
-                //
-                _map.addAddress( msg->getSourceId(), sourceAddr );
-                _format_map[msg->getSourceId()] = isOpc;
+            //
+            // Add the source to the transport discovery map.
+            // We also need to remember the format that was used.
+            //
+            _map.addElement( msg->getSourceId(), sourceAddr, raw_msg.getVersion() );
 
-                // Add the message to the list and change the return value
-                JrDebug << "Found valid UDP message (size " << jausMsgLength << 
-                    ", seq " << msg->getSequenceNumber() << ")\n";
-                msglist.push_back(msg);
-                ret = Ok;
-            }
+            // Add the message to the list and change the return value
+            JrDebug << "Found valid UDP message (size " << msg->getDataLength() << 
+                ", seq " << msg->getSequenceNumber() << ")\n";
+            msglist.push_back(msg);
+            ret = Ok;
 
             // Remove this message from the archive, so
             // we can process the next message in the packet.
-            raw_msg->removeHeadMsg( );
+            raw_msg.removeHeadMsg( );
         }
-
-        // free the message
-        delete raw_msg;
     }
 
     // If we didn't find any message, return NoMessage.  Otherwise, Ok.
@@ -356,21 +316,28 @@ Transport::TransportError JUDPTransport::broadcastMsg(Message& msg)
     //
     // Serialize the message.  Start by
     // creating a byte stream (payload) that contains the appropriate
-    // header.  Note that Jr will only broadcast with the JUDP header
-    // or the OPC header, never both.
+    // header.  Note that Jr will only broadcast with the AS5669A header,
+	// unless the CompatibilityMode config parameter is changed.  If
+	// maximum compatibility is selected, the message will
+	// be broadcasted multiple times, each with different header
+	// versions.
     //
-    TransportArchive *payload;
-    if (_use_opc) payload = new OPCArchive;
-    else payload = new JUDPArchive;
-    if (payload == NULL) return Failed;
+	if (_compatibilityMode != 0) ret = broadcastMsg(msg, AS5669);
+	if (_compatibilityMode != 1) ret = broadcastMsg(msg, AS5669A);
+	return ret;
+}
+
+Transport::TransportError JUDPTransport::broadcastMsg(Message& msg,
+													  MsgVersion version)
+{
+	TransportError ret = Ok;
 
     //
     // Now pack the message for network transport and append
     // it on the JUDP archive.
     //
-    Archive msg_archive;
-    msg.pack(msg_archive);
-    payload->setJausMsgData( msg_archive );
+	JUDPArchive archive;
+    archive.pack( msg, version );
 
     // Create the destination address structure
     struct sockaddr_in dest;
@@ -388,7 +355,7 @@ Transport::TransportError JUDPTransport::broadcastMsg(Message& msg)
             (const char*) &sockAddr, sizeof(sockAddr));
 
         // Lastly, send the message.
-        if (sendto(_socket, payload->getArchive(), payload->getArchiveLength(),
+        if (sendto(_socket, archive.getArchive(), archive.getArchiveLength(),
                    0, (struct sockaddr*) &dest, sizeof(dest)) < 0)
         {
             JrError << "Failed to broadcast UDP message on interface " <<
@@ -398,13 +365,11 @@ Transport::TransportError JUDPTransport::broadcastMsg(Message& msg)
         }
         else
         {
-            JrDebug << "Broadcasted " << payload->getArchiveLength() <<
+            JrDebug << "Broadcasted " << archive.getArchiveLength() <<
                 " bytes on interface " << inet_ntoa( *(struct in_addr*) &sockAddr.s_addr ) 
                 << std::endl;
         }
     }
 
-    // Free the pointer we allocated before returning
-    delete(payload);
-    return ret;
+	return ret;
 }

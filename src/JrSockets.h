@@ -27,7 +27,7 @@
 #define __JR_SOCKETS_H
 
 #include "Transport.h"
-#include "AddressMap.h"
+#include "ConnectionList.h"
 #include "OS.h"
 
 namespace DeVivo {
@@ -67,10 +67,10 @@ protected:
     void openResponseChannel(Message* msg);
 
     // Internal variables
-    bool                 is_connected;
-    AddressMap<SocketId> _map;
-    SocketId             connected_dest;
-    std::string          _socket_name;
+    bool                     _is_connected;
+	SocketId                 _connected_dest;
+    ConnectionList<SocketId> _map;
+    std::string              _socket_name;
     
     // Unfortunately, implementations are different between UNIX
     // and Windows, since Windows does not support named sockets.

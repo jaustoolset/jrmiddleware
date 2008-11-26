@@ -31,6 +31,7 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+#include "JrLogger.h"
 
 using namespace std;
 namespace DeVivo {
@@ -63,15 +64,23 @@ public:
     //
     ConfigError getValue(std::string name, std::string& value)
     {
-        if (_map.count(name) == 0) return ValueNotFound;
+        if (_map.count(name) == 0)
+		{
+			JrWarn << "Failed to find configuration item: " << name << std::endl;
+			return ValueNotFound;
+		}
         value = _map[name];
+		stripExtraChars(value);
+		return Ok;
+	}
 
+	void stripExtraChars(std::string& value)
+	{
         // strip line-feed, carriage return, and quote marks values
         value = value.substr(0, value.find_last_not_of("\n")+1);
         value = value.substr(0, value.find_last_not_of("\r")+1);
         value = value.substr(0, value.find_last_not_of("\"")+1);
         value = value.substr(value.find_first_not_of("\""));
-        return Ok;
     }
 
     //
@@ -80,7 +89,11 @@ public:
     //
     template <typename T> ConfigError getValue(std::string name, T& value)
     {
-        if (_map.count(name) == 0) return ValueNotFound;
+        if (_map.count(name) == 0)
+		{
+			JrWarn << "Failed to find configuration item: " << name << std::endl;
+			return ValueNotFound;
+		}
         value = (T) strtod(_map[name].c_str(), NULL);
         return Ok;
     }

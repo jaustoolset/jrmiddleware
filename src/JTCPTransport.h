@@ -27,7 +27,7 @@
 #define __JAUS_TCP_TRANSPORT_H
 
 #include "Transport.h"
-#include "IpAddressBook.h"
+#include "ConnectionList.h"
 #include "TCPConnection.h"
 #include "Types.h"
 
@@ -52,10 +52,11 @@ public:
 
 protected:
 
-    IpAddressBook       _address_map;
-    JTCPConnectionList  _connectionsList;
+    IpAddressBook       _address_map;      // address book
+    JTCPConnectionList  _connectionsList;  // active connections
     int                 _listen_socket;
     bool                _exit_flag;
+	char                _compatibilityMode;
 
 };
 }} // namespace DeVivo::Junior

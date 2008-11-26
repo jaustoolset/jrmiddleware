@@ -27,8 +27,8 @@
 #define __JAUS_SERIAL_TRANSPORT_H
 
 #include "Transport.h"
-#include "TransportArchive.h"
-#include "AddressMap.h"
+#include "JSerialArchive.h"
+#include "ConnectionList.h"
 #include "ConfigData.h"
 
 namespace DeVivo {
@@ -51,15 +51,15 @@ public:
     TransportError initialize(std::string config);
 
 protected:
-    HANDLE              hComm;
-    ConfigData          _config;
-    char                _use_opc;
-    JSerialArchive      unusedBytes;
-    AddressMap<HANDLE>  _map;
-    bool                previousByteWasDLE;
+    HANDLE                  hComm;
+    ConfigData              _config;
+    JSerialArchive          unusedBytes;
+    ConnectionList<HANDLE>  _map;
+    bool                    previousByteWasDLE;
+	char                    _compatibilityMode;
 
     // protected functions
-    TransportError sendMsg(Message& msg, HANDLE handle);
+    TransportError sendMsg(Message& msg, HANDLE handle, MsgVersion version);
     TransportError extractMsgsFromPacket(MessageList& msglist);
     TransportError configureLink();
 };
