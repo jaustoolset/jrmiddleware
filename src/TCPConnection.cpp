@@ -61,7 +61,7 @@ Transport::TransportError JTCPConnection::sendMsg(Message& msg)
 
     // Serialize the message to send.
     JTCPArchive payload;
-	payload.pack(msg, msg.getMessageCode() == 0 ? AS5669A : AS5669);
+	payload.pack(msg, _version);
 
     // By default, a JTCPArchive includes the version byte.
     // After we send the first message, however, the version byte is not needed.
@@ -164,14 +164,7 @@ void JTCPConnectionList::closeConnection(int socket)
     _connections.erase(socket);
 }
 
-JTCPConnection* JTCPConnectionList::getConnection(int socket)
-{
-    // Look-up a connection by socket
-    if (_connections.count(socket) == 0) return NULL;
-    return _connections[socket];
-}
-
-JTCPConnection* JTCPConnectionList::getConnection(JAUS_ID id)
+JTCPConnection* JTCPConnectionList::getConnection(JAUS_ID id, MsgVersion version)
 {
     // check for null case. JAUS ids of zero are not permitted.
     if (id == 0) return NULL;
@@ -180,7 +173,9 @@ JTCPConnection* JTCPConnectionList::getConnection(JAUS_ID id)
     // to romp through the map manually.
     std::map<int, JTCPConnection*>::iterator iter;
     for (iter = _connections.begin(); iter != _connections.end(); iter++)
-        if (id == iter->second->getId()) return iter->second;
+        if ((id == iter->second->getId()) && 
+			(version == iter->second->getVersion()))
+			return iter->second;
     return NULL;
 }
 

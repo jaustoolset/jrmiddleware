@@ -135,8 +135,11 @@ Transport::TransportError JTCPTransport::sendMsg(Message& msg)
     // Get the destination id from the message.  
     JAUS_ID destId = msg.getDestinationId();
 
+	// Also note which header version we're using
+	MsgVersion version = (msg.getMessageCode() == 0) ? AS5669A : AS5669;
+
     // First check to see if we have an open socket.
-    JTCPConnection* pDest = _connectionsList.getConnection(destId);
+    JTCPConnection* pDest = _connectionsList.getConnection(destId, version);
     if (!pDest)
     {
         // Didn't find a match in the list of open sockets.
@@ -187,6 +190,7 @@ Transport::TransportError JTCPTransport::sendMsg(Message& msg)
         // Also set the JAUS_ID & version for this destination.
         pDest->setId(destId);
 		pDest->setAddress(destAddr);
+		pDest->setVersion(version);
     }
 
     // Getting to this point means we have a valid connection object for

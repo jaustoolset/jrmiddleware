@@ -74,8 +74,7 @@ public:
     // List management functions
     JTCPConnection* addConnection(int socket);
     void closeConnection(int socket);
-    JTCPConnection* getConnection(int socket);
-    JTCPConnection* getConnection(JAUS_ID id);
+    JTCPConnection* getConnection(JAUS_ID id, MsgVersion version);
 
     // Public interface functions
     Transport::TransportError sendMsgToAll(Message& msg);
