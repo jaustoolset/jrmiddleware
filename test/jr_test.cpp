@@ -141,7 +141,7 @@ int main(int argc, char* argv[])
 
             //if ((counter % 500) == 0)
                 printf("Sending message %ld (id=%ld, size=%ld)\n", counter, msg_id, datasize);
-            JrErrorCode result = JrSend(handle, dest, datasize, buffer, 6, msg_id);
+            JrErrorCode result = JrSend(handle, dest, datasize, buffer, 6, ExperimentalFlag, msg_id);
             if ( result != Ok)
                 printf("Sendto failed (%d)\n", result);
         }
