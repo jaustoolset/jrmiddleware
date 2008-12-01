@@ -127,8 +127,10 @@ int main(int argc, char* argv[])
             } while ((datasize > MaxBufferSize) || (datasize < 10));
         }
 
-        // Assign it a random message id
+        // Assign it a random message id.  Since we have to test both AS5669
+		// and AS5669A, make half the messages without a message code.
         unsigned short msg_id = (unsigned short) rand();
+		if ((msg_id % 2) == 0) msg_id = 0;
 
         if (dest != 0)
         {
