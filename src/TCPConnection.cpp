@@ -123,6 +123,8 @@ Transport::TransportError JTCPConnection::recvMsg(MessageList& msglist)
 
         // Make sure we record the JAUS_ID of the sender
         if (_id == 0) _id = msg->getSourceId();
+        if (_version == UnknownVersion) 
+            _version = _incoming_stream.getVersion();
 
         // Add the message to the list and change the return value
         JrDebug << "Found valid TCP message (size " << msg->getDataLength() << ")\n";
