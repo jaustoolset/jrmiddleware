@@ -48,7 +48,7 @@ JUDPTransport::JUDPTransport():
     _socket(0),
     _multicastAddr(),
     _interfaces(),
-    _compatibilityMode(0)
+	_use_opc(0)
 {
 }
 
@@ -73,7 +73,7 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
     config.getValue("MulticastAddr", multicast_addr);
     int buffer_size = 10000;
     config.getValue("MaxBufferSize", buffer_size);
-    config.getValue("CompatibilityMode", _compatibilityMode);
+    config.getValue("UseOPC2.75_Header", _use_opc);
     std::string address_book;
     config.getValue("UDP_AddressBook", address_book);
 
@@ -189,22 +189,25 @@ Transport::TransportError JUDPTransport::sendMsg(Message& msg)
             msg.setDestinationId(id);
 
             //
-            // For each destination, we use information from the last received
-			// message to determine the message version to send.
-			// If no entry exists in the map, the
-            // default selection from _compatibilityMode is taken.
-			MsgVersion version = UnknownVersion;
-		    if (!_map.getMsgVersion(id, version) || (version == UnknownVersion))
+            // Now pack the message into the transport archive.  Note that the
+			// header format depends on the version, which in turn depends on
+			// the presence of a non-zero message code.  UDP has the added complication
+			// of needing to support backward compatibility with OPC.
+            //
+			MsgVersion version = AS5669A;
+			if (msg.getMessageCode() != 0)
 			{
-				// this is a problem case.  we really should never be here.
-				version = (_compatibilityMode == 1) ? AS5669 : AS5669A;
-				JrWarn << "Unable to determine header version for " << id.val
-					<< ".  Using: " << VersionEnumToString(version) << std::endl;
+				// If we've received a message from this destination before, use
+				// the version of that received message.  Otherwise, take a hint
+				// from the UseOPC2.75_Header config parameter.
+				MsgVersion prevVersion = UnknownVersion;
+				if ((_map.getMsgVersion(id, prevVersion)) &&
+					(prevVersion == OPC) || (prevVersion == AS5669))
+					version = prevVersion;
+				else version = (_use_opc ? OPC : AS5669);				
 			}
 
-            //
-            // Now pack the message into the transport archive
-            //
+			// pack for the selected version
 			archive.pack(msg, version);
 
             // Create the destination address structure
@@ -314,29 +317,13 @@ Transport::TransportError JUDPTransport::broadcastMsg(Message& msg)
     TransportError ret = Ok;
 
     //
-    // Serialize the message.  Start by
-    // creating a byte stream (payload) that contains the appropriate
-    // header.  Note that Jr will only broadcast with the AS5669A header,
-	// unless the CompatibilityMode config parameter is changed.  If
-	// maximum compatibility is selected, the message will
-	// be broadcasted multiple times, each with different header
-	// versions.
-    //
-	if (_compatibilityMode != 0) ret = broadcastMsg(msg, AS5669);
-	if (_compatibilityMode != 1) ret = broadcastMsg(msg, AS5669A);
-	return ret;
-}
-
-Transport::TransportError JUDPTransport::broadcastMsg(Message& msg,
-													  MsgVersion version)
-{
-	TransportError ret = Ok;
-
-    //
-    // Now pack the message for network transport and append
-    // it on the JUDP archive.
+    // Now pack the message for network transport.  If the message contains
+	// a zero command code, use the AS5669A header.  Otherwise, use
+	// the AS 5669 header UNLESS the UseOPC2.75_Header option is selected.
     //
 	JUDPArchive archive;
+	MsgVersion version = msg.getMessageCode() == 0 ? AS5669A : AS5669;
+	if ((version == AS5669) && (_use_opc)) version = OPC;
     archive.pack( msg, version );
 
     // Create the destination address structure

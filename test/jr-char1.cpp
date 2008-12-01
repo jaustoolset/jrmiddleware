@@ -273,7 +273,7 @@ void echoMode(int handle, unsigned long myid, unsigned long dest)
     {
         // check for incoming messages
         unsigned int buffersize = MaxBufferSize; msg_id = 0; int flags = 0;
-        JrErrorCode ret = JrReceive(handle, &sender, &msg_id, &buffersize, buffer, &priority, &flags);
+        JrErrorCode ret = JrReceive(handle, &sender, &buffersize, buffer, &priority, &flags, &msg_id);
 
         if (ret == Ok)
         {
@@ -291,7 +291,7 @@ void echoMode(int handle, unsigned long myid, unsigned long dest)
 			if ((verbose)||( DEBUG_MODE_VAR ))
 			printf("%ld ECHO: src=%ld, dest=%ld, id=%ld, size=%ld, priority=%ld, flags=%ld\n", totalMsgsSent, sender, myid, msg_id, buffersize, priority, flags);
 			// Swap the SRC & DEST and send it back
-			JrErrorCode result = JrSend(handle, sender, msg_id, buffersize, buffer, priority, flags);
+			JrErrorCode result = JrSend(handle, sender, buffersize, buffer, priority, flags, msg_id);
 			if ( result != Ok)
 			{ 
 				totalErrorsDetected++;   
@@ -322,7 +322,7 @@ JrErrorCode sender( int handle, unsigned long myid, unsigned long dest, unsigned
 	DPRINTF("%ld SND: src=%ld, dest=%ld, id=%ld, size=%ld, priority=%ld, flags=%ld\n", totalMsgsSent, myid, dest, msg_id, dsize, priority, flags);
 	long sndTime=GetTimestamp();
 	*((long*) &buffer[18]) = htonl((long)sndTime);
-	return( JrSend(handle, dest, msg_id, dsize, buffer, priority, flags) );
+	return( JrSend(handle, dest, dsize, buffer, priority, flags, msg_id) );
 }
 /*     ----------   M E S S A G E   S C O R E R  ----------     */
 void score(int handle, unsigned long myid, unsigned long dest)
@@ -339,7 +339,7 @@ void score(int handle, unsigned long myid, unsigned long dest)
 	for (int k = 0; k<100; k++) //arbitrary count of 10 
 	{
         unsigned int buffersize = MaxBufferSize; unsigned short msg_id = 0; int flags = 0;
-		JrErrorCode ret = JrReceive(handle, &sender, &msg_id, &buffersize, buffer, &priority, &flags);
+		JrErrorCode ret = JrReceive(handle, &sender, &buffersize, buffer, &priority, &flags, &msg_id);
         if (ret == Ok)
 		{   
 			long rcvTime=(long)GetTimestamp();

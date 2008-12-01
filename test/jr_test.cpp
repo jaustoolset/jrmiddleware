@@ -139,7 +139,7 @@ int main(int argc, char* argv[])
 
             //if ((counter % 500) == 0)
                 printf("Sending message %ld (id=%ld, size=%ld)\n", counter, msg_id, datasize);
-            JrErrorCode result = JrSend(handle, dest, msg_id, datasize, buffer, 6, ExperimentalFlag);
+            JrErrorCode result = JrSend(handle, dest, datasize, buffer, 6, msg_id);
             if ( result != Ok)
                 printf("Sendto failed (%d)\n", result);
         }
@@ -148,7 +148,7 @@ int main(int argc, char* argv[])
         for (int i=0; i<500; i++)
         {
             unsigned int buffersize = MaxBufferSize; msg_id = 0; int flags = 0;
-            JrErrorCode ret = JrReceive(handle, &sender, &msg_id, &buffersize, buffer, NULL, &flags);
+            JrErrorCode ret = JrReceive(handle, &sender, &buffersize, buffer, NULL, &flags, &msg_id);
             if (ret == Ok)
             {
                 // Pull off the data that was embedded in teh message.

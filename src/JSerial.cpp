@@ -79,8 +79,7 @@ int baud2Enum(int baud)
 // Class definition
 JSerial::JSerial():
    hComm(0),
-   previousByteWasDLE(false),
-   _compatibilityMode(0)
+   previousByteWasDLE(false)
 {
 }
 
@@ -249,7 +248,6 @@ Transport::TransportError JSerial::initialize( std::string filename )
     _config.getValue("SerialPortName", portname);
     portname = SERIAL_PATH + portname;
     JrInfo << "Serial: Using port " << portname << std::endl;
-	_config.getValue("CompatibilityMode", _compatibilityMode);
 
 #ifdef WINDOWS
     // Open a file for reading/writing to the port
@@ -284,22 +282,8 @@ Transport::TransportError JSerial::sendMsg(Message& msg)
         if ((_map.getList()[i]->getId() == msg.getDestinationId()) &&
             (_map.getList()[i]->getId() != msg.getSourceId()))
         {
-			// If we've already communicated with this endpoint, we should
-			// know the header version it wants.  Otherwise, use a hint
-			// from CompatibilityMode.
-			MsgVersion version = UnknownVersion;
-			if (!_map.getMsgVersion(_map.getList()[i]->getId(), version) || 
-				(version == UnknownVersion))
-			{
-				// this is a problem case.  we really should never be here.
-				version = (_compatibilityMode == 1) ? AS5669 : AS5669A;
-				JrWarn << "Unable to determine header version for " << 
-					_map.getList()[i]->getId().val << ".  Using: " <<
-				    VersionEnumToString(version) << std::endl;
-			}
-
             // Send to this entry
-            ret = sendMsg(msg, _map.getList()[i]->getAddress(), version);
+            ret = sendMsg(msg, _map.getList()[i]->getAddress());
         }
     }
 
@@ -307,8 +291,7 @@ Transport::TransportError JSerial::sendMsg(Message& msg)
 }
 
 Transport::TransportError JSerial::sendMsg(Message& msg, 
-										   HANDLE handle,
-										   MsgVersion version)
+										   HANDLE handle)
 {
     // Assume the best...
     Transport::TransportError result = Ok;
@@ -322,7 +305,7 @@ Transport::TransportError JSerial::sendMsg(Message& msg,
     // Now pack the message for network transport 
     //
     JSerialArchive archive;
-	archive.pack(msg, version);
+	archive.pack(msg, msg.getMessageCode() == 0 ? AS5669A : AS5669);
 
 #ifdef WINDOWS
 
@@ -448,16 +431,8 @@ Transport::TransportError JSerial::recvMsg(MessageList& msglist)
 
 Transport::TransportError JSerial::broadcastMsg(Message& msg)
 {
-	TransportError ret = Ok;
-
-    // Unlike a send, the broadcast does not check for a valid
-    // destination field.  It simply pushes everything across
-    // the port using the default connection.  The only tricky
-	// part is managing the header version based on the 
-	// user's setting for CompatibilityMode.
-    if (_compatibilityMode != 0) ret = sendMsg(msg, hComm, AS5669);
-	if (_compatibilityMode != 1) ret = sendMsg(msg, hComm, AS5669A);
-	return ret;
+	// Broadcast for serial is the same as a send.
+	return sendMsg(msg, hComm);
 }
 
 Transport::TransportError JSerial::extractMsgsFromPacket(MessageList& msglist)
@@ -474,7 +449,6 @@ Transport::TransportError JSerial::extractMsgsFromPacket(MessageList& msglist)
     while (unusedBytes.isArchiveValid())
     {
         // Extract the payload into a message
-        // UGH!! Two copies here.  Need to eliminate this.
         Message* msg = new Message();
         unusedBytes.unpack(*msg);
 

@@ -45,7 +45,7 @@ class TransportArchive : public Archive
 
 	// A transport archive converts a message into a byte stream
 	// by serializing or "packing".  
-	virtual bool pack(Message& msg) = 0;
+	virtual bool pack(Message& msg, MsgVersion version) = 0;
 	virtual bool unpack(Message& msg) = 0;
 
 	// Helper functions for common operations

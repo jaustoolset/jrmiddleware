@@ -220,32 +220,15 @@ inline bool IpAddressBook::loadFromFile(std::string filename)
         std::string rhs;
         if (addresses.getValue(*iter, rhs) != ConfigData::Ok) continue;
 
-		// Parse the right hand side.  It should be of the form:
-		//  address-in-dot-notation:port:version
-	    std::string ip_str = rhs.substr(0,rhs.find_last_of(":"));
-		std::string version_str = rhs.substr(rhs.find_last_of(":")+1);
-        if (ip_str.empty() || version_str.empty()) continue;
-
         // Make an IP_ADDRESS structure from the string
         IP_ADDRESS ip_struct;
-		if (!ip_struct.fromString(ip_str)) continue;
-
-		// Extract the version string.  We borrow the "stripExtraChars"
-		// function to clean-up extraneous quotation marks and end lines.
-		addresses.stripExtraChars(version_str);
-		MsgVersion version = VersionStringToEnum(version_str); 
-		if (version == UnknownVersion)
-		{
-			JrWarn << "Unknown version specified for ID=" << *iter <<
-				" (" << version_str << ").  Discarding entry." << std::endl;
-			continue;
-		}
+		if (!ip_struct.fromString(rhs)) continue;
 
         // Add to the map
-        addElement(JAUS_ID(*iter), ip_struct, version);
+        addElement(JAUS_ID(*iter), ip_struct, UnknownVersion);
 
         JrFull << "Adding entry to address map: " << *iter << " -> " << 
-            ip_struct.toString() << " (version=" << version_str << ")" << std::endl;
+            ip_struct.toString() << std::endl;
     }
 
     return true;

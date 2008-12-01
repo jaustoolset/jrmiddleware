@@ -53,10 +53,7 @@ protected:
     int                      _socket;
     IP_ADDRESS               _multicastAddr;
     std::list<unsigned long> _interfaces;
-    char                     _compatibilityMode;
-
-    // Internal function to handle different header versions
-    TransportError broadcastMsg(Message& msg, MsgVersion version);
+	char                     _use_opc;
 
 };
 }} // namespace DeVivo::Junior

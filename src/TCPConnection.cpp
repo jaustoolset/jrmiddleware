@@ -61,7 +61,7 @@ Transport::TransportError JTCPConnection::sendMsg(Message& msg)
 
     // Serialize the message to send.
     JTCPArchive payload;
-	payload.pack(msg, _version);
+	payload.pack(msg, msg.getMessageCode() == 0 ? AS5669A : AS5669);
 
     // By default, a JTCPArchive includes the version byte.
     // After we send the first message, however, the version byte is not needed.
@@ -123,8 +123,6 @@ Transport::TransportError JTCPConnection::recvMsg(MessageList& msglist)
 
         // Make sure we record the JAUS_ID of the sender
         if (_id == 0) _id = msg->getSourceId();
-
-		// TO DO VERSION!!!!
 
         // Add the message to the list and change the return value
         JrDebug << "Found valid TCP message (size " << msg->getDataLength() << ")\n";

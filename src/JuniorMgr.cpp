@@ -380,21 +380,6 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
 }
 
 
-// This form assumes that the 16-byte header is already in place.
-JrErrorCode JuniorMgr::sendto( unsigned int size, const char* buffer )
-{
-    // Put the entire message in an archive, so we can 
-    // unmarshall it into a Message object
-    SocketArchive packed_msg;
-    packed_msg.setData(buffer, size);
-    Message msg;
-    packed_msg.unpack(msg);    
-
-    // send the message
-    _socket_ptr->sendMsg(msg);
-    return Ok;
-}
-
 JrErrorCode JuniorMgr::recvfrom(unsigned long* sender,
                         unsigned int* bufsize,
                         char* buffer,
@@ -465,62 +450,6 @@ JrErrorCode JuniorMgr::recvfrom(unsigned long* sender,
     // Getting to this point means we have no messages to return.
     return NoMessages;
 }
-
-// This form assumes that the 16-byte header is already in place.
-JrErrorCode JuniorMgr::recvfrom( unsigned int* size, char* buffer )
-{
-    // Check the socket for incoming messages.  
-    MessageList msglist;
-    Transport::TransportError ret = _socket_ptr->recvMsg(msglist);
-
-    // Process each message in the received list
-    while (!msglist.empty())
-    {
-        // Extract the message from the list
-        Message* msg = msglist.front();
-        msglist.pop_front();
-
-        // Add this message to a priority buffer
-        _buffers[msg->getPriority()].push_back(msg);
-        _msg_count++;
-
-    }
-
-    // Check each priority based buffer (highest first) looking for a message
-    for (int j = JrMaxPriority; j >= 0; j--)
-    {
-        if (!_buffers[j].empty())
-        {
-            // Found a non-empty buffer.  Pop the message out and return the data.
-
-            Message* value = _buffers[j].front();
-            _buffers[j].pop_front();
-            _msg_count--;
-
-            // Return the entire packed message, including the header
-            SocketArchive packed_msg;
-            packed_msg.pack(*value);
-
-            // Make sure the incoming packet doesn't exceed the buffer
-            JrErrorCode ret = Ok;
-            if (*size < packed_msg.getArchiveLength())
-                ret = Overflow;
-            else
-                *size = packed_msg.getArchiveLength();
-
-            // Copy into the users buffer and return
-            memcpy( buffer, packed_msg.getArchive(), *size);
-            delete value;
-            return ret;
-        }
-    }
-
-    // Getting to this point means we have no messages to return.
-    return NoMessages;
-}
-
-
-
 
 JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
 {

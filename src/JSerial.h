@@ -56,10 +56,9 @@ protected:
     JSerialArchive          unusedBytes;
     ConnectionList<HANDLE>  _map;
     bool                    previousByteWasDLE;
-	char                    _compatibilityMode;
 
     // protected functions
-    TransportError sendMsg(Message& msg, HANDLE handle, MsgVersion version);
+    TransportError sendMsg(Message& msg, HANDLE handle);
     TransportError extractMsgsFromPacket(MessageList& msglist);
     TransportError configureLink();
 };

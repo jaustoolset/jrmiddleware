@@ -26,7 +26,7 @@
 #include "JrSockets.h"
 #include "ConfigData.h"
 #include "JrLogger.h"
-#include "SocketArchive.h"
+#include "JUDPArchive.h"
 #include <fcntl.h>
 #include <errno.h>
 #include <sstream>
@@ -113,9 +113,10 @@ void JrSocket::openResponseChannel(Message* msg)
 
 Transport::TransportError JrSocket::sendMsg(Message& msg, SocketId sockname)
 {
-    // Serialize the message before sending it.
-    SocketArchive archive;
-    archive.pack(msg);
+    // Serialize the message before sending it.  Note that the header
+	// version depends on the setting of the message code.
+    JUDPArchive archive;
+	archive.pack(msg, msg.getMessageCode() == 0 ? AS5669A : AS5669);
 
     // Send to the given socket
 #ifdef WINDOWS
@@ -218,8 +219,8 @@ Transport::TransportError JrSocket::recvMsg(MessageList& msglist)
         // If we didn't receive anything, break from the read loop.
         if (bytes <= 0) break;
  
-        // Now that we have a datagram in our buffer, unpack it.
-        SocketArchive archive;
+        // Now that we have a datagram in our buffer, move it to an archive.
+        JUDPArchive archive;
         archive.setData(buffer, bytes);
 
         // And unpack it...

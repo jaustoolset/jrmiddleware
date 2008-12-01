@@ -44,8 +44,7 @@ class JSerialArchive : public TransportArchive
     ~JSerialArchive(){}
 
 	// Primary function is to pack/unpack messages
-	bool pack(Message& msg) { return pack(msg, AS5669);}
-	bool pack(Message& msg, MsgVersion version = AS5669);
+	bool pack(Message& msg, MsgVersion version);
 	bool unpack(Message& msg);
 
 	// Helper functions to read data directly from archive

@@ -38,10 +38,6 @@ if os.name == "nt":
 							 source = 'jr_test.cpp',
 							 LIBS = 'Junior' )
 							 
-    ratestapp = dllenv.Program( target = 'ra_test',
-							 source = 'ra_test.cpp',
-							 LIBS = 'Junior' )
-							 
     jrcharapp = dllenv.Program( target = 'jr_char',
 							     source = 'jr-char1.cpp',
 							     LIBS = 'Junior' )							 
@@ -52,11 +48,7 @@ else:
     testapp = baseEnv.Program( target = 'jr_test',
 							  source = 'jr_test.cpp',
 							  LIBS = 'Junior' )
-
-    ratestapp = baseEnv.Program( target = 'ra_test',
-							  source = 'ra_if_test.cpp',
-							  LIBS = 'Junior' )
-							  
+						  
     jrcharapp = baseEnv.Program( target = 'jr_char',
 							  source = 'jr-char1.cpp',
 							  LIBS = 'Junior' )
@@ -64,5 +56,4 @@ else:
 
 	                                                    
 baseEnv.Install( baseEnv['INSTALL_BINDIR'], testapp )
-baseEnv.Install( baseEnv['INSTALL_BINDIR'], ratestapp )
 baseEnv.Install( baseEnv['INSTALL_BINDIR'], jrcharapp )

@@ -233,6 +233,7 @@ int main(int argc, char* argv[])
                 if (msg->getDestinationId().containsWildcards() || !matchFound)
                 {
                     // Send this message to all recipients on all transports.
+					msg->setBroadcast(2);
                     for (_iter = _transports.begin(); _iter != _transports.end(); ++_iter)
                         (*_iter)->broadcastMsg(*msg);
                 }

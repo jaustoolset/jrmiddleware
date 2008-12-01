@@ -50,13 +50,9 @@ public:
     JrErrorCode sendto( unsigned long destination, unsigned int size, 
                 const char* buffer, int priority, int flags, MessageCode code = 0);
 
-    JrErrorCode sendto( unsigned int size, const char* buffer);
-
     JrErrorCode recvfrom( unsigned long* sender, unsigned int* bufsize,
                   char* buffer, int* priority, int* flags, MessageCode* code = NULL);
     
-    JrErrorCode recvfrom( unsigned int* bufsize, char* buffer );
-
     JrErrorCode connect(unsigned long id, std::string config_file);
 
     unsigned char pending( );

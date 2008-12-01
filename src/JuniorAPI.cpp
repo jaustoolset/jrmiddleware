@@ -24,7 +24,6 @@
  ************************************************************************
  */
 #include "JuniorAPI.h"
-#include "JuniorRA.h"
 #include "JuniorMgr.h"
 
 using namespace DeVivo::Junior;
@@ -66,52 +65,33 @@ JrErrorCode _stdcall JrCheckAllHandles(int* list, int& size_of_list)
 
 JrErrorCode _stdcall JrSend(int handle,
            unsigned long destination, 
-           unsigned short msg_id,
            unsigned int bufsize, 
            const char* buffer,
            int priority,
-           int flags)
+           int flags,
+		   unsigned short msg_id )
 {
     if (handle == 0) return NotInitialized;
     JuniorMgr* mgr = (JuniorMgr*) handle;
     return (mgr->sendto(destination, bufsize, buffer, priority, flags, msg_id));
 }
 
-JrErrorCode _stdcall RaSend(int handle,
-                   unsigned int bufsize,
-                   const char* buffer)
-{
-    if (handle == 0) return NotInitialized;
-    JuniorMgr* mgr = (JuniorMgr*) handle;
-    return (mgr->sendto(bufsize, buffer));
-}
-
-JrErrorCode _stdcall RaReceive(int handle,
-                      unsigned int* bufsize,
-                      char* buffer)
-{
-    if (handle == 0) return NotInitialized;
-    JuniorMgr* mgr = (JuniorMgr*) handle;
-    return (mgr->recvfrom(bufsize, buffer));
-}
-
-
 JrErrorCode _stdcall JrBroadcast(int handle,
-              unsigned short msg_id,
               unsigned int bufsize,
               const char* buffer,
-              int priority)
+              int priority,
+              unsigned short msg_id)
 {
-    return JrSend(handle, 0xFFFFFFFF, msg_id, bufsize, buffer, priority, 0);
+    return JrSend(handle, 0xFFFFFFFF, bufsize, buffer, priority, 0, msg_id);
 }
 
 JrErrorCode _stdcall JrReceive(int handle,
              unsigned long* sender,
-             unsigned short* msg_id,
              unsigned int* bufsize,
              char* buffer,
              int* priority,
-             int* flags )
+             int* flags,
+			 unsigned short* msg_id)
 {
     if (handle == 0) return NotInitialized;
     JuniorMgr* mgr = (JuniorMgr*) handle;

@@ -46,25 +46,25 @@ const unsigned char ExperimentalFlag  = 0x04;
 // Functional interface.  
 JrErrorCode _stdcall JrSend(int handle,
            unsigned long destination, 
-           unsigned short msg_id,
            unsigned int size, 
            const char* buffer,
-           int priority,
-           int flags);
+           int priority = 6,
+           int flags = 0,
+		   unsigned short msg_id = 0);
 
 JrErrorCode _stdcall JrReceive(int handle,
              unsigned long* source,
-             unsigned short* msg_id,
              unsigned int* bufsize,
              char* buffer,
-             int* priority,
-             int* flags );
+             int* priority = 0,
+             int* flags = 0,
+			 unsigned short* msg_id = 0);
 
 JrErrorCode _stdcall JrBroadcast(int handle,
-              unsigned short msg_id,
               unsigned int size,
               const char* buffer,
-              int priority);
+              int priority = 6,
+			  unsigned short msg_id = 0);
 
 JrErrorCode _stdcall JrCheckAllHandles(int* list, int& size_of_list);
 

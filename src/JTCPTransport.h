@@ -56,8 +56,6 @@ protected:
     JTCPConnectionList  _connectionsList;  // active connections
     int                 _listen_socket;
     bool                _exit_flag;
-	char                _compatibilityMode;
-
 };
 }} // namespace DeVivo::Junior
 #endif
