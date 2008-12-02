@@ -204,7 +204,7 @@ Transport::TransportError JTCPConnectionList::sendMsgToAll(Message& msg)
 
 Transport::TransportError JTCPConnectionList::recvMsgs(MessageList& msglist)
 {
-    std::map<int, JTCPConnection*>::iterator iter;
+    std::map<int, JTCPConnection*>::iterator iter, temp;
     for (iter = _connections.begin(); iter != _connections.end(); )
 	{
         if (iter->second->recvMsg(msglist) == Transport::ConnectionClosed)
@@ -212,7 +212,10 @@ Transport::TransportError JTCPConnectionList::recvMsgs(MessageList& msglist)
 			// remote entity has closed the connection
 			JrDebug << "Detected shutdown of TCP connection.  Closing...\n";
 			delete (iter->second);
-			iter = _connections.erase(iter); // note that this increment the iterator
+
+			// be careful removing this element from the map.  we need to
+			// update the iterator BEFORE erasing the element.
+			temp = iter; iter++; _connections.erase(temp);
 		}
 		else
 			++iter; // manually increment the iterator for the next loop
