@@ -95,6 +95,10 @@ Transport::TransportError JTCPTransport::initialize( std::string filename )
         return InitFailed;
     }
 
+	// Set the socket option to permit immediate re-use after close
+	char reuse = 1;
+	setsockopt(_listen_socket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(char));
+
     // Bind the socket to the specified port
     struct sockaddr_in sockAddr;
     sockAddr.sin_family = AF_INET;
