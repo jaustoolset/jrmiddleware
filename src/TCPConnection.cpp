@@ -198,7 +198,7 @@ Transport::TransportError JTCPConnectionList::recvMsgs(MessageList& msglist)
         if (iter->second->recvMsg(msglist) == Transport::ConnectionClosed)
 		{
 			// remote entity has closed the connection
-			printf("Closing connection\n");
+			JrDebug << "Detected shutdown of TCP connection.  Closing...\n";
 			closeConnection(iter->first);
 		}
     return Transport::Ok;
