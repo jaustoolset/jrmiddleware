@@ -96,8 +96,8 @@ Transport::TransportError JTCPTransport::initialize( std::string filename )
     }
 
 	// Set the socket option to permit immediate re-use after close
-	char reuse = 1;
-	setsockopt(_listen_socket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(char));
+	int reuse = 1;
+	setsockopt(_listen_socket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
 
     // Bind the socket to the specified port
     struct sockaddr_in sockAddr;
@@ -106,7 +106,8 @@ Transport::TransportError JTCPTransport::initialize( std::string filename )
     sockAddr.sin_port = htons(port);
     if (bind(_listen_socket,(struct sockaddr*)&sockAddr,sizeof(sockAddr))<0)
     {
-        JrError << "Unable to bind to TCP port " << port << std::endl;
+        JrError << "Unable to bind to TCP port " << port << 
+          "(err=" << getSocketError << ")\n";
         closesocket(_listen_socket);
         _listen_socket = 0;
         return InitFailed;
