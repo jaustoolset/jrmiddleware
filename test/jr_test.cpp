@@ -49,6 +49,19 @@ void Sleep(unsigned long milliseconds)
 }
 #endif
 
+// Define a time stamp function
+unsigned long GetTimestamp()
+{
+#ifdef WINDOWS
+    return (unsigned long)(GetTickCount());
+#else
+    struct timeval tv; struct timezone tz;
+    gettimeofday(&tv, &tz);
+    return (tv.tv_sec*1000 + (unsigned long)(tv.tv_usec/1000));
+#endif
+}
+
+
 // Define the path name for the config file
 #ifdef WINDOWS
 #define CONFIG_PATH_NAME "c:/windows/system32/"
@@ -112,7 +125,7 @@ int main(int argc, char* argv[])
     int prevMsg  =0;
 
     // Randomize
-    srand(rand());
+    srand(GetTimestamp());
 
     // Do stuff
     while(!exit_flag)
