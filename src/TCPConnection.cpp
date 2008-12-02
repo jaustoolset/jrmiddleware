@@ -107,7 +107,8 @@ Transport::TransportError JTCPConnection::recvMsg(MessageList& msglist)
 
     // getting here means we have data.  pull it.
     int len = recv(_socket, buffer, 5000, 0);
-    if (len <= 0) return ret;
+	if (len == 0) return Transport::ConnectionClosed;
+    if (len < 0) return Transport::Failed;
     JrDebug << "Read " << len << " bytes on TCP port\n";
 
     // Since TCP data represents a stream, we can't assume the data
@@ -194,7 +195,12 @@ Transport::TransportError JTCPConnectionList::recvMsgs(MessageList& msglist)
 {
     std::map<int, JTCPConnection*>::iterator iter;
     for (iter = _connections.begin(); iter != _connections.end(); iter++)
-        iter->second->recvMsg(msglist);
+        if (iter->second->recvMsg(msglist) == Transport::ConnectionClosed)
+		{
+			// remote entity has closed the connection
+			printf("Closing connection\n");
+			closeConnection(iter->first);
+		}
     return Transport::Ok;
 }
 
