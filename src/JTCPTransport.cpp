@@ -97,7 +97,7 @@ Transport::TransportError JTCPTransport::initialize( std::string filename )
 
 	// Set the socket option to permit immediate re-use after close
 	int reuse = 1;
-	setsockopt(_listen_socket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
+	setsockopt(_listen_socket, SOL_SOCKET, SO_REUSEADDR, (char*)&reuse, sizeof(int));
 
     // Bind the socket to the specified port
     struct sockaddr_in sockAddr;
