@@ -169,10 +169,12 @@ void JTCPConnectionList::closeConnection(int socket)
 
 void JTCPConnectionList::closeAllConnections()
 {
-    // Loop through the map entries.
+    // Loop through the map entries, deleting the connection 
+	// before clearing the entire map.
     std::map<int, JTCPConnection*>::iterator iter;
     for (iter = _connections.begin(); iter != _connections.end(); iter++)
-		closeConnection(iter->first);
+		delete (iter->second);
+	_connections.clear();
 
 }
 
@@ -203,13 +205,18 @@ Transport::TransportError JTCPConnectionList::sendMsgToAll(Message& msg)
 Transport::TransportError JTCPConnectionList::recvMsgs(MessageList& msglist)
 {
     std::map<int, JTCPConnection*>::iterator iter;
-    for (iter = _connections.begin(); iter != _connections.end(); iter++)
+    for (iter = _connections.begin(); iter != _connections.end(); )
+	{
         if (iter->second->recvMsg(msglist) == Transport::ConnectionClosed)
 		{
 			// remote entity has closed the connection
 			JrDebug << "Detected shutdown of TCP connection.  Closing...\n";
-			closeConnection(iter->first);
+			delete (iter->second);
+			iter = _connections.erase(iter); // note that this increment the iterator
 		}
+		else
+			++iter; // manually increment the iterator for the next loop
+	}
     return Transport::Ok;
 }
 
