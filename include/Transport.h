@@ -44,7 +44,7 @@ public:
     //
     enum TransportError 
     {
-        Ok, NoMessages, InvalidConfigFile, InitFailed, AddrUnknown, Failed 
+        Ok, NoMessages, InvalidConfigFile, InitFailed, AddrUnknown, Failed, ConnectionClosed 
     };
 
     // All functions are abstract
