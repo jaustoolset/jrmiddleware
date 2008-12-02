@@ -167,6 +167,15 @@ void JTCPConnectionList::closeConnection(int socket)
     _connections.erase(socket);
 }
 
+void JTCPConnectionList::closeAllConnections()
+{
+    // Loop through the map entries.
+    std::map<int, JTCPConnection*>::iterator iter;
+    for (iter = _connections.begin(); iter != _connections.end(); iter++)
+		closeConnection(iter->first);
+
+}
+
 JTCPConnection* JTCPConnectionList::getConnection(JAUS_ID id, MsgVersion version)
 {
     // check for null case. JAUS ids of zero are not permitted.

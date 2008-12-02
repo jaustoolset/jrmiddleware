@@ -62,6 +62,7 @@ JTCPTransport::JTCPTransport():
 JTCPTransport::~JTCPTransport()
 {
     if (_listen_socket > 0) closesocket(_listen_socket);
+	_connectionsList.closeAllConnections();
 }
 
 Transport::TransportError JTCPTransport::initialize( std::string filename )

@@ -74,6 +74,7 @@ public:
     // List management functions
     JTCPConnection* addConnection(int socket);
     void closeConnection(int socket);
+	void closeAllConnections();
     JTCPConnection* getConnection(JAUS_ID id, MsgVersion version);
 
     // Public interface functions
