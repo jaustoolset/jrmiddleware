@@ -456,9 +456,9 @@ JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
     ConfigData config;
     config.parseFile(config_file);
     std::string logfile;
-    config.getValue("LogFileName", logfile);
-    unsigned char debug_level = 0;
-    config.getValue("LogMsgLevel", debug_level);
+    config.getValue(logfile, "LogFileName", "Log_Configuration");
+    int debug_level = 3;
+    config.getValue(debug_level, "LogMsgLevel", "Log_Configuration");
 
     // Now set-up the data logger
     if (debug_level > (int) Logger::full) debug_level = (int) Logger::full;
@@ -490,7 +490,7 @@ JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
 
     // First open a socket with the given name.
     JrSocket* mySocket = new JrSocket(name.str());
-    if (mySocket->initialize(config_file) != Transport::Ok)
+    if (mySocket->initialize(config) != Transport::Ok)
     {
         JrError << "Failed to open a local socket.  Returning error...\n";
         delete mySocket;
@@ -547,12 +547,12 @@ JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
     _id.val     = id;
 
     // Initialize config data from file
-    config.getValue("MaxMsgHistory", _maxMsgHistory);
-    config.getValue("OldMsgTimeout", _oldMsgTimeout);
-    config.getValue("DropDuplicateMsgs", _detectDuplicates);
-    config.getValue("MaxAckNakRetries", _max_retries);
-    config.getValue("AckTimeout", _ack_timeout);
-    config.getValue("MTU_Size", _max_msg_size);
+    config.getValue(_maxMsgHistory, "MaxMsgHistory", "API_Configuration");
+    config.getValue(_oldMsgTimeout, "OldMsgTimeout", "API_Configuration");
+    config.getValue(_detectDuplicates, "DropDuplicateMsgs", "API_Configuration");
+    config.getValue(_max_retries, "MaxAckNakRetries", "API_Configuration");
+    config.getValue(_ack_timeout, "AckTimeout", "API_Configuration");
+    config.getValue(_max_msg_size, "MTU_Size", "API_Configuration");
 	if (_max_msg_size > 4079)
 	{
 		JrWarn << "MTU_Size cannot exceed 4079 bytes.  Setting MTU_Size=4079\n";

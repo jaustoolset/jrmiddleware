@@ -57,25 +57,19 @@ JUDPTransport::~JUDPTransport()
     if (_socket > 0) closesocket(_socket);
 }
 
-Transport::TransportError JUDPTransport::initialize( std::string filename )
+Transport::TransportError JUDPTransport::initialize( ConfigData& config )
 {
-    // Open the configuration file
-    ConfigData config;
-    config.parseFile(filename);
-
     // Read the configuration file, and set-up defaults for anything
     // that isn't specified.
     unsigned short port = 3794;
-    config.getValue("UDP_Port", port);
-    unsigned char multicast_TTL = 16;
-    config.getValue("MulticastTTL", multicast_TTL);
+    config.getValue(port, "UDP_Port", "UDP_Configuration" );
+    unsigned int multicast_TTL = 16;
+    config.getValue(multicast_TTL, "MulticastTTL", "UDP_Configuration");
     std::string multicast_addr = "239.255.0.1";
-    config.getValue("MulticastAddr", multicast_addr);
+    config.getValue(multicast_addr, "MulticastAddr", "UDP_Configuration");
     int buffer_size = 10000;
-    config.getValue("MaxBufferSize", buffer_size);
-    config.getValue("UseOPC2.75_Header", _use_opc);
-    std::string address_book;
-    config.getValue("UDP_AddressBook", address_book);
+    config.getValue(buffer_size, "MaxBufferSize", "UDP_Configuration");
+    config.getValue(_use_opc, "UseOPC2.75_Header", "UDP_Configuration");
 
     // Set-up the multicast address based on config data
     _multicastAddr.port = htons(port);
@@ -146,7 +140,7 @@ Transport::TransportError JUDPTransport::initialize( std::string filename )
 
     // UDP sockets support run-time discovery.  It's also possible, however,
     // to initialize the map statically through a config file.
-    _map.loadFromFile(address_book);
+    _map.Load(config);
 
     return Ok;
 }

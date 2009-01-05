@@ -29,6 +29,7 @@
 
 #include <string>
 #include "Message.h"
+#include "ConfigData.h"
 
 namespace DeVivo {
 namespace Junior {
@@ -51,7 +52,7 @@ public:
     virtual TransportError sendMsg(Message& msg) = 0;
     virtual TransportError recvMsg(MessageList& msglist) = 0;
     virtual TransportError broadcastMsg(Message& msg) = 0;
-    virtual TransportError initialize(std::string config) = 0;
+    virtual TransportError initialize(ConfigData& config) = 0;
 
     // Debugging
     std::string enumToString( TransportError code );

@@ -89,16 +89,16 @@ JSerial::~JSerial()
     hComm = 0;
 }
 
-Transport::TransportError JSerial::configureLink()
+Transport::TransportError JSerial::configureLink(ConfigData& config, int index)
 {
     unsigned int baudrate = 19200;
-    _config.getValue("SerialBaudRate", baudrate);
+    config.getValue(baudrate, "SerialBaudRate", "Serial_Configuration", index);
     std::string parity = "none";
-    _config.getValue("SerialParity", parity);
-    unsigned char stopbits = 1;
-    _config.getValue("SerialStopBits", stopbits);
-    unsigned char software_dataflow = 0;
-    _config.getValue("SerialSoftwareFlowControl", software_dataflow);
+    config.getValue(parity, "SerialParity", "Serial_Configuration", index);
+    unsigned int stopbits = 1;
+    config.getValue(stopbits, "SerialStopBits", "Serial_Configuration", index);
+    unsigned int software_dataflow = 0;
+    config.getValue(software_dataflow, "SerialSoftwareFlowControl", "Serial_Configuration", index);
 
 
     // Check for valid parameters
@@ -238,14 +238,11 @@ Transport::TransportError JSerial::configureLink()
     return Ok;
 }
 
-Transport::TransportError JSerial::initialize( std::string filename )
+Transport::TransportError JSerial::initialize( ConfigData& config, int index )
 {
-    // Parse the config file
-    _config.parseFile(filename);
-
     // Pull the com port name and compatbility mode
     std::string portname = "COM1";
-    _config.getValue("SerialPortName", portname);
+    config.getValue(portname, "SerialPortName", "Serial_Configuration", index);
     portname = SERIAL_PATH + portname;
     JrInfo << "Serial: Using port " << portname << std::endl;
 
@@ -268,7 +265,7 @@ Transport::TransportError JSerial::initialize( std::string filename )
     }
 
     // Configure the link for parity, baud rate, etc.
-    configureLink();
+    configureLink(config, index);
     return Ok;
 }
 
@@ -352,7 +349,7 @@ Transport::TransportError JSerial::recvMsg(MessageList& msglist)
     DWORD bytesRead;
     if (!ReadFile(hComm, buffer, 5000, &bytesRead, NULL))
     {
-        JrError << "Failed to read serial port.  Error:" <<  getlasterror << std::endl;
+        //JrError << "Failed to read serial port.  Error:" <<  getlasterror << std::endl;
         return Failed;
     }
 #else

@@ -45,7 +45,7 @@ public:
     TransportError sendMsg(Message& msg);
     TransportError broadcastMsg(Message& msg);
     TransportError recvMsg(MessageList& msglist);
-    TransportError initialize(std::string config);
+    TransportError initialize(ConfigData& config);
 
 protected:
 

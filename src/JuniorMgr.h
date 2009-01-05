@@ -76,8 +76,8 @@ private:
     JrSocket*          _socket_ptr;
     unsigned short     _message_counter;
     MsgIdList          _recentMsgs;
-    unsigned char      _max_retries;
-    unsigned char      _ack_timeout;
+    unsigned int       _max_retries;
+    unsigned int       _ack_timeout;
     unsigned int       _msg_count;
     unsigned int       _max_msg_size;
 

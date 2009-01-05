@@ -26,27 +26,21 @@
 #ifndef  __CONFIG_DATA_H
 #define  __CONFIG_DATA_H
 
-#include <list>
-#include <map>
-#include <string>
-#include <fstream>
-#include <iostream>
+#include "tinyxml.h"
 #include "JrLogger.h"
+#include "Types.h"
 
-using namespace std;
 namespace DeVivo {
 namespace Junior {
 
-// Define a list of strings so we can report the
-// map keys back to the requestor
-typedef std::list<std::string> StringList;
-typedef std::list<std::string>::iterator StringListIter;
 
-
+// We use TinyXML for parsing the configure file into a DOM.
+// The ConfigData class provides abstraction from the DOM
+// and XML, in case we switch to a different solution later.
 class ConfigData
 {
 public:
-    ConfigData(): _map(){};
+	ConfigData(){};
     ~ConfigData(){};
 
     //
@@ -59,67 +53,100 @@ public:
     //
     ConfigError parseFile( std::string filename );
 
-    //
-    // Special case for string handling
-    //
-    ConfigError getValue(std::string name, std::string& value)
-    {
-        if (_map.count(name) == 0)
-		{
-			JrWarn << "Failed to find configuration item: " << name << std::endl;
-			return ValueNotFound;
-		}
-        value = _map[name];
-		stripExtraChars(value);
-		return Ok;
-	}
+	//
+	// Access an atribute of an element.  An optional
+	// index can be supplied to manage duplicate elements.
+	//
+	template <typename T> ConfigError getValue(T& value,
+											   std::string attribute,
+											   std::string element,
+											   int index = 0);
 
-	void stripExtraChars(std::string& value)
-	{
-        // strip line-feed, carriage return, and quote marks values
-        value = value.substr(0, value.find_last_not_of("\n")+1);
-        value = value.substr(0, value.find_last_not_of("\r")+1);
-        value = value.substr(0, value.find_last_not_of("\"")+1);
-        value = value.substr(value.find_first_not_of("\""));
-    }
-
-    //
-    // Functions to access a data item.  This is a templated function,
-    // since we don't know the data type yet.
-    //
-    template <typename T> ConfigError getValue(std::string name, T& value)
-    {
-        if (_map.count(name) == 0)
-		{
-			JrWarn << "Failed to find configuration item: " << name << std::endl;
-			return ValueNotFound;
-		}
-        value = (T) strtod(_map[name].c_str(), NULL);
-        return Ok;
-    }
-
-    // 
-    // Function to get a list of keys from the map
-    //
-    void getKeyList(StringList& list);
+	// Get a list of attributed for a given element
+	StringList getAttributes(std::string element);
 
 protected:
 
-    // Helper functions
-    void deleteWhitespace(std::string& in);
-
-    //
-    // The main element is the mapping between name and value.
-    // Both are stored as a string until the value is accessed.
-    //
-    std::map<std::string, std::string> _map;
-
-    //
-    // Internal function to parse a line as "name=value" and add it to the map
-    //
-    ConfigError parseLine( std::string line );
+    TiXmlDocument doc;
 
 };
+
+
+inline ConfigData::ConfigError ConfigData::parseFile( std::string filename )
+{
+	doc.LoadFile(filename.c_str());
+	if (doc.Error())
+	{
+		JrError << "Failed to parse config file: " << filename << std::endl;
+
+		// Cast the TinyXML errors to our enum
+		if (doc.ErrorId() == TiXmlBase::TIXML_ERROR_OPENING_FILE) 
+			return FileNotFound;
+		return InvalidFile;
+	}
+	return Ok;
+}
+
+template <typename T> 
+inline ConfigData::ConfigError ConfigData::getValue(T& value,
+													std::string attribute,
+													std::string element,
+													int index)
+
+{
+	// Get the first occurrence of the requested element
+	TiXmlHandle docHandle( &doc );
+	TiXmlElement* ele = docHandle.FirstChild("JrConfigData").FirstChild(element.c_str()).ToElement();
+	if (ele == NULL) 
+	{
+		JrWarn << "Failed to find configuration element: " << element << "\n";
+		return ValueNotFound;
+	}
+
+	// Loop through the index values to find the requested element number
+	while ( index > 0 )
+	{
+		ele = ele->NextSiblingElement(element.c_str());
+		if (ele == NULL)
+		{
+			JrWarn<<"Failed to find configuration element: "<<element <<"\n";
+			return ValueNotFound;
+		}
+		index--;
+	}
+
+	// Now that we have the right element, pull the requested attribute.
+	if (ele->QueryValueAttribute(attribute.c_str(), &value) != TIXML_SUCCESS)
+	{
+		JrWarn << "Failed to find configuration attribute: " << attribute<<"\n";
+		return ValueNotFound;
+	}
+
+	// Success!
+	JrDebug << "Found config value: " << attribute << " = " << value << std::endl;
+	return Ok;
+}
+
+
+inline StringList ConfigData::getAttributes(std::string element)
+{
+	StringList ret;
+
+	// Get the first occurrence of the requested element
+	TiXmlHandle docHandle( &doc );
+	TiXmlElement* ele = docHandle.FirstChild("JrConfigData").FirstChild(element.c_str()).ToElement();
+	if (ele == NULL) return ret; 
+
+	// Walk through the attributes, returning a string for each
+	for (TiXmlAttribute* att = ele->FirstAttribute(); att != NULL; att = att->Next())
+	{
+		//JrDebug << "Found attribute: " << att->Name() << "\n";
+		ret.push_back(att->Name());
+	}
+	return ret;
+}
+
+
 }} // namespace DeVivo::Junior
 #endif
 

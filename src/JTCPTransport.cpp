@@ -65,20 +65,14 @@ JTCPTransport::~JTCPTransport()
 	_connectionsList.closeAllConnections();
 }
 
-Transport::TransportError JTCPTransport::initialize( std::string filename )
+Transport::TransportError JTCPTransport::initialize( ConfigData& config )
 {
-    // Open the configuration file
-    ConfigData config;
-    config.parseFile(filename);
-
     // Read the configuration file, and set-up defaults for anything
     // that isn't specified.
     unsigned short port = 3794;
-    config.getValue("TCP_Port", port);
+    config.getValue(port, "TCP_Port", "TCP_Configuration");
     int buffer_size = 10000;
-    config.getValue("MaxBufferSize", buffer_size);
-    std::string address_book;
-    config.getValue("TCP_AddressBook", address_book);
+    config.getValue(buffer_size, "MaxBufferSize", "TCP_Configuration" );
 
 #ifdef WINDOWS
     // Must initialize the windows socket library before using
@@ -128,7 +122,7 @@ Transport::TransportError JTCPTransport::initialize( std::string filename )
     setsockopt(_listen_socket, SOL_SOCKET, SO_SNDBUF, (char*)&buffer_size, length);
 
     // Initialize the address book
-    _address_map.loadFromFile(address_book);
+    _address_map.Load(config);
 
     // Spawn the thread that will accept incoming connections
     JrSpawnThread(JrAcceptConnections, this);

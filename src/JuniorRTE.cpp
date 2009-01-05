@@ -60,26 +60,29 @@ int main(int argc, char* argv[])
     ConfigData config;
     config.parseFile(config_file);
     std::string logfile;
-    config.getValue("LogFileName", logfile);
-    unsigned char debug_level = 0;
-    config.getValue("LogMsgLevel", debug_level);
-    unsigned char allowRelay = 1;
-    config.getValue("AllowRelay", allowRelay);
-    unsigned char delay = 1;
-    config.getValue("RTE_CycleTime", delay);
-    char use_udp = 1;
-    config.getValue("EnableUDPInterface", use_udp);
-    char use_tcp = 0;
-    config.getValue("EnableTCPInterface", use_tcp);
-    char use_serial = 0;
-    config.getValue("EnableSerialInterface", use_serial);
-    char repeater_mode = 0;
-    config.getValue("EnableRepeaterMode", repeater_mode);
+    config.getValue(logfile, "LogFileName", "Log_Configuration");
+    int debug_level = 3;
+    config.getValue(debug_level, "LogMsgLevel", "Log_Configuration");
 
-    // Now set-up the data logger
+	// Now set-up the data logger
     if (debug_level > (int) Logger::full) debug_level = (int) Logger::full;
     Logger::get()->setMsgLevel((enum Logger::LogMsgType) debug_level);
     if (!logfile.empty()) Logger::get()->openOutputFile(logfile);
+
+	// And now we can read the rest of the config file, with the benefit
+	// of logging....
+    int allowRelay = 1;
+    config.getValue(allowRelay, "AllowRelay", "RTE_Configuration");
+    int delay = 1;
+    config.getValue(delay ,"RTE_CycleTime", "RTE_Configuration");
+    int use_udp = 1;
+    config.getValue(use_udp, "EnableUDPInterface", "RTE_Configuration");
+    int use_tcp = 0;
+    config.getValue(use_tcp, "EnableTCPInterface", "RTE_Configuration");
+    int use_serial = 0;
+    config.getValue(use_serial, "NumSerialInterfaces", "RTE_Configuration");
+    int repeater_mode = 0;
+    config.getValue(repeater_mode, "EnableRepeaterMode", "RTE_Configuration");
 
     // We can finally output some proof-of-life info
     JrInfo << "Hello, and welcome to the JuniorRTE" << std::endl;
@@ -92,7 +95,7 @@ int main(int argc, char* argv[])
 
     // Create the public socket that allows APIs to find us.
     JrSocket publicSocket(std::string("JuniorRTE"));
-    if (publicSocket.initialize(config_file) != Transport::Ok)
+    if (publicSocket.initialize(config) != Transport::Ok)
     {
         JrError << "Unable to initialize internal socket.  Exiting ...\n";
         exit(1);
@@ -122,7 +125,7 @@ int main(int argc, char* argv[])
     // Add UDP, if selected
     if (use_udp)
     {
-        if (udp.initialize(config_file) != Transport::Ok)
+        if (udp.initialize(config) != Transport::Ok)
         {
             JrInfo << "Unable to initialize UDP communications.\n";
         }
@@ -138,7 +141,7 @@ int main(int argc, char* argv[])
     if (use_tcp)
     {
 
-        if (tcp.initialize(config_file) != Transport::Ok)
+        if (tcp.initialize(config) != Transport::Ok)
         {
             JrInfo << "Unable to initialize TCP communications.\n";
         }
@@ -151,19 +154,21 @@ int main(int argc, char* argv[])
     }
 
     // Add Serial, if selected
-    if (use_serial)
+	if (use_serial == 0)
+        JrInfo << "Serial communication deactivated in configuration file\n";
+    while (use_serial > 0)
     {
+		use_serial--;
 
-        if (serial.initialize(config_file) != Transport::Ok)
+		// Since we can support multiple serial connections, each
+		// one must have an zero-based index associated with it.
+		JrDebug << "Initializing serial interface #" << use_serial << "\n";
+        if (serial.initialize(config, use_serial) != Transport::Ok)
         {
             JrInfo << "Unable to initialize serial communications.\n";
         }
         else
             _transports.push_back(&serial);
-    }
-    else
-    {
-        JrInfo << "Serial communication deactivated in configuration file\n";
     }
 
     // Predefine a list of messages we receive from the transports.

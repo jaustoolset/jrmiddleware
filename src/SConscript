@@ -32,13 +32,15 @@ API_Files = [
     'JrSockets.cpp',
     'JuniorMgr.cpp',
     'OS.cpp',
-    'ConfigData.cpp',
     'JrLogger.cpp',
     'JUDPTransport.cpp',
     'JSerial.cpp',
     'ChecksumCRC.cpp',
     'TCPConnection.cpp',
-    'JTCPTransport.cpp'
+    'JTCPTransport.cpp',
+    'tinyxml/tinyxml.cpp',
+    'tinyxml/tinyxmlerror.cpp',
+    'tinyxml/tinyxmlparser.cpp'
 ]
 
 # Define multiple environments for building and using
@@ -79,4 +81,4 @@ else:
 
 baseEnv.Install( baseEnv['INSTALL_LIBDIR'], apilib )
 baseEnv.Install( baseEnv['INSTALL_BINDIR'], rteapp )
-baseEnv.Install( baseEnv['INSTALL_BINDIR'], 'junior.cfg' )
+baseEnv.Install( baseEnv['INSTALL_BINDIR'], 'jr_config.xml' )

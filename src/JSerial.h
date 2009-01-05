@@ -48,11 +48,18 @@ public:
     TransportError sendMsg(Message& msg);
     TransportError broadcastMsg(Message& msg);
     TransportError recvMsg(MessageList& msglist);
-    TransportError initialize(std::string config);
+    TransportError initialize(ConfigData& config, int index);
+
+	// We need to define the initialize() function as
+	// required by the parent class.  However, this function
+	// simply calls the class-specific form.
+    TransportError initialize(ConfigData& config)
+	{ 
+		return initialize(config,0);
+	};
 
 protected:
     HANDLE                  hComm;
-    ConfigData              _config;
     JSerialArchive          unusedBytes;
     ConnectionList<HANDLE>  _map;
     bool                    previousByteWasDLE;
@@ -60,7 +67,7 @@ protected:
     // protected functions
     TransportError sendMsg(Message& msg, HANDLE handle);
     TransportError extractMsgsFromPacket(MessageList& msglist);
-    TransportError configureLink();
+    TransportError configureLink(ConfigData& config, int index);
 };
 }} // namespace DeVivo::Junior
 #endif

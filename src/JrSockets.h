@@ -52,7 +52,9 @@ public:
     TransportError sendMsg(Message& msg);
     TransportError recvMsg(MessageList& msglist);
     TransportError broadcastMsg(Message& msg);
-    TransportError initialize(std::string source);
+    TransportError initialize(ConfigData& source);
+
+	// speciality functions not forced by the parent class
     TransportError setDestination(std::string destination);
     TransportError removeDestination(JAUS_ID id);
     unsigned char  messagesInQueue();

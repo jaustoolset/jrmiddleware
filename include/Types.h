@@ -34,6 +34,11 @@
 namespace DeVivo {
 namespace Junior {
 
+// Define convenient types.
+typedef std::list<std::string> StringList;
+typedef std::list<std::string>::iterator StringListIter;
+
+
 static unsigned char getByte(unsigned long in, char num)
 {
     return ((unsigned char)(in>>(num*8)));

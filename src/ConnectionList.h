@@ -187,30 +187,18 @@ public:
    ~IpAddressBook(){};
 
    // Function to populate an address book from a file
-   bool loadFromFile(std::string filename); 
+   bool Load(ConfigData& addresses); 
 };
 
+//
 // Load the address book from a given configuration file.
 // All entries must be of the form:
-//   <ip_address_in_dot_notation>:<port>:<version>
-// where <version> is the header version used by the remote
-// entity.  At present, supported values are: "OPC", "AS5669",
-// and "AS5669A".
-inline bool IpAddressBook::loadFromFile(std::string filename)
+//   L<id> = <ip_address_in_dot_notation>:<port>
+// 
+inline bool IpAddressBook::Load(ConfigData& addresses)
 {
-    // check for null case
-    if (filename.empty()) return false;
-    if (filename == "") return false;
-
-    JrDebug << "Loading TCP address book from " << filename << std::endl;
-
-    // Open the given file as a config file
-    ConfigData addresses;
-    if (addresses.parseFile(filename) != ConfigData::Ok) return false;
-
     // Each key in the address book should be a JAUS ID
-    StringList ids;
-    addresses.getKeyList(ids);
+    StringList ids = addresses.getAttributes("AddressBook");
 
     // For each key, extract the IP address
     StringListIter iter;
@@ -218,16 +206,19 @@ inline bool IpAddressBook::loadFromFile(std::string filename)
     {
         // Pull the ip_address port string for the id
         std::string rhs;
-        if (addresses.getValue(*iter, rhs) != ConfigData::Ok) continue;
+        if (addresses.getValue(rhs, *iter, "AddressBook") != ConfigData::Ok) continue;
 
         // Make an IP_ADDRESS structure from the string
         IP_ADDRESS ip_struct;
 		if (!ip_struct.fromString(rhs)) continue;
 
-        // Add to the map
-        addElement(JAUS_ID(*iter), ip_struct, UnknownVersion);
+		// Pull the ID from the key (remove the leading character)
+		std::string ID = (*iter).substr(1);
 
-        JrFull << "Adding entry to address map: " << *iter << " -> " << 
+        // Add to the map
+        addElement(JAUS_ID(strtod(ID.c_str(), NULL)), ip_struct, UnknownVersion);
+
+        JrFull << "Adding entry to address map: " << ID << " -> " << 
             ip_struct.toString() << std::endl;
     }
 

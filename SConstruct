@@ -19,6 +19,9 @@ baseEnv['LIBPATH'] = ['#lib']
 baseEnv['INSTALL_LIBDIR'] = '#lib'
 baseEnv['INSTALL_BINDIR'] = '#bin'
 
+# Special flags needed for TinyXML
+baseEnv.Append( CCFLAGS = ['-DTIXML_USE_STL'])
+
 # Set-up a cross-compile environment, if selected
 if ARGUMENTS.get('cross', 0) == 'arm':
     print "scons: Building for ARM..."  

@@ -268,7 +268,7 @@ Transport::TransportError JrSocket::broadcastMsg(Message& msg)
     return Ok;
 }
 
-Transport::TransportError JrSocket::initialize(std::string config_file)
+Transport::TransportError JrSocket::initialize(ConfigData& config)
 {
     // Set-up is considerably different for UNIX sockets and
     // Windows named pipes.
@@ -302,10 +302,8 @@ Transport::TransportError JrSocket::initialize(std::string config_file)
     }
 
     // Read the configuration file for buffer size info
-    ConfigData config;
-    config.parseFile(config_file);
     socklen_t buffer_size = 10000;
-    config.getValue("MaxBufferSize", buffer_size);
+    config.getValue(buffer_size, "MaxBufferSize", "UDP_Configuration");
 
     // Increase the size of the send/receive buffers
     int length = sizeof(buffer_size);
