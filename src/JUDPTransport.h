@@ -53,7 +53,7 @@ protected:
     int                      _socket;
     IP_ADDRESS               _multicastAddr;
     std::list<unsigned long> _interfaces;
-	char                     _use_opc;
+	int                      _use_opc;
 
 };
 }} // namespace DeVivo::Junior
