@@ -169,7 +169,8 @@ inline bool JUDPArchive::pack(Message& msg, MsgVersion version)
 	// header depends on the version we're packing for
 	if (version == OPC)
 	{
-		*this << "JAUS01.0";
+		memcpy(data, "JAUS01.0", 8);
+		data_length = 8;
 	}
 	else if (version == AS5669)
 	{
