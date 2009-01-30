@@ -216,7 +216,7 @@ inline bool IpAddressBook::Load(ConfigData& addresses)
 		std::string ID = (*iter).substr(1);
 
         // Add to the map
-        addElement(JAUS_ID(strtod(ID.c_str(), NULL)), ip_struct, UnknownVersion);
+        addElement(JAUS_ID((unsigned long)strtod(ID.c_str(), NULL)), ip_struct, UnknownVersion);
 
         JrFull << "Adding entry to address map: " << ID << " -> " << 
             ip_struct.toString() << std::endl;
