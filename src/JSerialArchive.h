@@ -189,7 +189,7 @@ inline bool JSerialArchive::isArchiveValid()
             (unsigned char*)&data[2], 0xFFFF, 3+addressSize);
     if (header_checksum != local_header_checksum)
     {
-        JrError << "Serial header checksum mismatch (" << header_checksum <<
+        JrDebug << "Serial header checksum mismatch (" << header_checksum <<
             " versus " << local_header_checksum << ")\n";
         return false;
     }
@@ -202,8 +202,9 @@ inline bool JSerialArchive::isArchiveValid()
             local_header_checksum, getArchiveLength()-4-7-addressSize);
     if (packet_checksum != local_packet_checksum)
     {
-        JrError << "Serial packet checksum mismatch (" << packet_checksum <<
+        JrDebug << "Serial packet checksum mismatch (" << packet_checksum <<
             " versus " << local_packet_checksum << ")\n";
+		return false;
     }
 
     // getting to this point means we have a valid packet
@@ -257,7 +258,7 @@ inline bool JSerialArchive::pack(Message& msg, MsgVersion version)
 	// Compute the packet checksum
     unsigned short packet_checksum = crc_calculate(
         (unsigned char*)&data[7], 
-        header_checksum, getArchiveLength()-4-7);
+        header_checksum, getArchiveLength()-2-7);
 	*this << packet_checksum;
 
     // insert DLE markers for data fields
