@@ -99,6 +99,7 @@ int main(int argc, char* argv[])
     {
         std::stringstream u; u << argv[3];
         u >> size;
+		if (size < 10) size = 10;
     }
 
 
@@ -171,7 +172,7 @@ int main(int argc, char* argv[])
                 unsigned int size = ntohl(*((unsigned int*) &buffer[4]));
                 unsigned short id = ntohs(*((unsigned short*) &buffer[8]));
                 if (size != buffersize) printf("WARNING: SIZE INCONSISTENT (msg=%ld, buffer=%ld)\n", size, buffersize);
-                if ((msg_id != 0) && (id != msg_id)) printf("WARNING: ID INCONSISTENT (msg=%ld, buffer=%ld)\n", msg_id, id);
+                if (id != msg_id) printf("WARNING: ID INCONSISTENT (msg=%ld, buffer=%ld)\n", msg_id, id);
                 if ((prevMsg+1) != msgcount) printf("WARNING: Messages not in sequence (prev=%ld, this=%ld)\n", prevMsg, msgcount);
                 //if ((msgcount % 500) == 0)
                     printf("Incoming Msg: Sender = %ld, Count = %ld, ID = %ld, Size = %ld, Flags = %ld\n", sender, msgcount, msg_id, buffersize, flags);

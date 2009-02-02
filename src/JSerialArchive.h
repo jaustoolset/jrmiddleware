@@ -320,10 +320,10 @@ inline bool JSerialArchive::unpack(Message& msg)
 	Archive::offset = addressSize + ((getVersion()==AS5669) ? 13 : 9);
 
 	// unpack common header, then message body, the common footer
-	TransportArchive::unpackHdr(msg);
+	TransportArchive::unpackHdr(msg, getVersion());
 	msg.setPayload( getDataLength(), getDataPtr() );
 	Archive::offset += getDataLength();
-	TransportArchive::unpackFtr(msg);
+	TransportArchive::unpackFtr(msg, getVersion());
 	return true;
 }
 
