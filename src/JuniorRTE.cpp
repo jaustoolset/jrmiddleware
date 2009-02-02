@@ -117,20 +117,20 @@ int main(int argc, char* argv[])
     std::list<Transport*>::iterator _iter;
     _transports.push_back(&publicSocket);
 
-	// Create the transports, but don't initialize them unless requested.
-    JUDPTransport udp;
-    JTCPTransport tcp;
-    JSerial serial;
-
     // Add UDP, if selected
     if (use_udp)
     {
-        if (udp.initialize(config) != Transport::Ok)
-        {
-            JrInfo << "Unable to initialize UDP communications.\n";
-        }
-        else
-            _transports.push_back(&udp);
+		// Create the transport object, initialize it, then add it to the list.
+		JUDPTransport *udp = new JUDPTransport;
+		if (udp != NULL)
+		{
+			if (udp->initialize(config) != Transport::Ok)
+			{
+				JrInfo << "Unable to initialize UDP communications.\n";
+			}
+			else
+				_transports.push_back(udp);
+		}
     }
     else
     {
@@ -140,13 +140,16 @@ int main(int argc, char* argv[])
     // Add TCP, if selected
     if (use_tcp)
     {
-
-        if (tcp.initialize(config) != Transport::Ok)
-        {
-            JrInfo << "Unable to initialize TCP communications.\n";
-        }
-        else
-            _transports.push_back(&tcp);
+		JUDPTransport *tcp = new JUDPTransport;
+		if (tcp != NULL)
+		{
+			if (tcp->initialize(config) != Transport::Ok)
+			{
+				JrInfo << "Unable to initialize TCP communications.\n";
+			}
+			else
+				_transports.push_back(tcp);
+		}
     }
     else
     {
@@ -158,17 +161,21 @@ int main(int argc, char* argv[])
         JrInfo << "Serial communication deactivated in configuration file\n";
     while (use_serial > 0)
     {
-		use_serial--;
+		use_serial--; // decrement the count for the next loop
+
+		// instantiate a new serial transport.
+		JSerial *serial = new JSerial;
+		if (serial == NULL) continue;
 
 		// Since we can support multiple serial connections, each
 		// one must have an zero-based index associated with it.
 		JrDebug << "Initializing serial interface #" << use_serial << "\n";
-        if (serial.initialize(config, use_serial) != Transport::Ok)
+        if (serial->initialize(config, use_serial) != Transport::Ok)
         {
             JrInfo << "Unable to initialize serial communications.\n";
         }
         else
-            _transports.push_back(&serial);
+            _transports.push_back(serial);
     }
 
     // Predefine a list of messages we receive from the transports.

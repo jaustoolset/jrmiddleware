@@ -294,11 +294,6 @@ Transport::TransportError JSerial::sendMsg(Message& msg,
     Transport::TransportError result = Ok;
 
     //
-    // Creating a byte stream (payload) for the message
-    //
-    JSerialArchive payload;
-
-    //
     // Now pack the message for network transport 
     //
     JSerialArchive archive;
@@ -308,8 +303,8 @@ Transport::TransportError JSerial::sendMsg(Message& msg,
 
     // Write to the open port
     DWORD bytesWritten;
-    bool ret = WriteFile(handle, payload.getArchive(), 
-                      payload.getArchiveLength(),
+    bool ret = WriteFile(handle, archive.getArchive(), 
+                      archive.getArchiveLength(),
                       &bytesWritten, NULL);
     if (ret == 0) 
     {
@@ -319,16 +314,16 @@ Transport::TransportError JSerial::sendMsg(Message& msg,
 
 #else
 
-    int bytesWritten = write(handle, payload.getArchive(),
-                        payload.getArchiveLength());
+    int bytesWritten = write(handle, archive.getArchive(),
+                        archive.getArchiveLength());
 
 #endif
 
     // make sure we wrote the whole packet
-    if (bytesWritten != payload.getArchiveLength())
+    if (bytesWritten != archive.getArchiveLength())
     {
         JrError << "Failed to write full packet on serial port. Wrote " << 
-            bytesWritten << " of " << payload.getArchiveLength() << std::endl;
+            bytesWritten << " of " << archive.getArchiveLength() << std::endl;
         result = Failed;
     }
     else
