@@ -117,6 +117,7 @@ Transport::TransportError JrSocket::sendMsg(Message& msg, SocketId sockname)
 	// version depends on the setting of the message code.
     JUDPArchive archive;
 	archive.pack(msg, msg.getMessageCode() == 0 ? AS5669A : AS5669);
+	JrDebug << "Sending socket message to " << msg.getDestinationId().val << std::endl;
 
     // Send to the given socket
 #ifdef WINDOWS
@@ -124,7 +125,11 @@ Transport::TransportError JrSocket::sendMsg(Message& msg, SocketId sockname)
     bool fSuccess = WriteFile( sockname, archive.getArchive(), 
         archive.getArchiveLength(), &cbWritten, NULL);
     if (!fSuccess || (cbWritten != archive.getArchiveLength())) 
-        return Failed;
+	{
+		JrError << "Unable to write on local socket (" << cbWritten << " of 
+			<< archive.getArchiveLength() << "written)\n";
+		return Failed;
+	}
 #else
     struct sockaddr_un addr;
     memset(addr.sun_path, 0, sizeof(addr.sun_path));
@@ -132,7 +137,12 @@ Transport::TransportError JrSocket::sendMsg(Message& msg, SocketId sockname)
     memcpy(addr.sun_path, sockname.c_str(), sockname.length());
     int ret = sendto(sock, archive.getArchive(), archive.getArchiveLength(), 0,
        (struct sockaddr *)&addr, sizeof(struct sockaddr_un));
-    if (ret != archive.getArchiveLength()) return Failed;
+    if (ret != archive.getArchiveLength()) 
+	{
+		JrError << "Unable to write on local socket (" << ret << " of "
+			<< archive.getArchiveLength() << "written)\n";
+		return Failed;
+	}
 #endif
 
     return Ok;
@@ -226,6 +236,8 @@ Transport::TransportError JrSocket::recvMsg(MessageList& msglist)
         // And unpack it...
         Message* msg = new Message();
         archive.unpack(*msg);
+
+		JrDebug << "Received socket message from " << msg->getSourceId().val << std::endl;
 
         // If we're not a connected socket, open a response
         // channel to the sender so we can talk to it later.
