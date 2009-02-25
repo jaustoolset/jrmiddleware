@@ -126,7 +126,7 @@ Transport::TransportError JrSocket::sendMsg(Message& msg, SocketId sockname)
         archive.getArchiveLength(), &cbWritten, NULL);
     if (!fSuccess || (cbWritten != archive.getArchiveLength())) 
 	{
-		JrError << "Unable to write on local socket (" << cbWritten << " of 
+		JrError << "Unable to write on local socket (" << cbWritten << " of "
 			<< archive.getArchiveLength() << "written)\n";
 		return Failed;
 	}
