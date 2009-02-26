@@ -550,7 +550,7 @@ int main(int argc, char* argv[])
     // Connect to the JR Run-Time Engine
     int handle;
     std::string file_path = std::string(CONFIG_PATH_NAME) + 
-                            std::string("junior.cfg");
+                            std::string("jr_config.xml");
     if (JrConnect(myid, file_path.c_str(), &handle) != Ok)
     {
         printf("Init failed.  Terminating execution\n");
