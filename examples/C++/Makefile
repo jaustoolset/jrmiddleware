@@ -16,10 +16,10 @@ OBJ2 = $(addsuffix .o, $(basename $(SRC2)))
 
 all: sender receiver
 sender: $(OBJ1)
-	$(CXX) $(CXXFLAGS) -o $@ $(OBJ1) -lm $(LIB)
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJ1) -lm -lpthread $(LIB)
 	
 receiver: $(OBJ2)
-	$(CXX) $(CXXFLAGS) -o $@ $(OBJ2) -lm $(LIB)
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJ2) -lm -lpthread $(LIB)
 
 #-----Other stuff----------------------------
 clean:

@@ -58,7 +58,8 @@ int main(int argc, char* argv[])
         do
         {
             buffersize = MaxMsgSize;
-            ret = JrReceive(handle, &sender, &msg_id, &buffersize, buffer, NULL, NULL);
+            ret = JrReceive(handle, &sender, &buffersize, buffer, 
+                            NULL, NULL, &msg_id);
             if ((ret == Ok)  && (msg_id == ReportId))
             {
                 // If this sender is not in our list of destinations, add it.
@@ -71,13 +72,13 @@ int main(int argc, char* argv[])
         } while (ret == Ok);
 
         // Broadcast a query for ids
-        JrBroadcast(handle, QueryId, 0, buffer, 6);
+        JrBroadcast(handle, 0, buffer, 6, QueryId);
 
         // Send a message to each known destination
         for (iter = destinations.begin(); iter != destinations.end(); iter++)
         {
             sprintf(buffer, "Message sent from %ld\0", myid);
-            JrSend(handle, *iter, MsgString, strlen(buffer), buffer, 6, 0);
+            JrSend(handle, *iter, strlen(buffer), buffer, 6, 0, MsgString);
         }
 
     // Sleep a bit before looping again

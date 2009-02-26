@@ -50,14 +50,15 @@ int main(int argc, char* argv[])
     while(1)
     {
         buffersize = MaxMsgSize;
-        ret = JrReceive(handle, &sender, &msg_id, &buffersize, buffer, NULL, NULL);
+        ret = JrReceive(handle, &sender, &buffersize, buffer, 
+                        NULL, NULL, &msg_id);
         if (ret == Ok)
         {
             // Handle different message types differently.
             if (msg_id == QueryId)
             {
                 // Respond with a ReportId
-                JrSend(handle, sender, ReportId, 0, buffer, 6, 0);
+                JrSend(handle, sender, 0, buffer, 6, 0, ReportId);
             }
             else if (msg_id == MsgString)
             {
