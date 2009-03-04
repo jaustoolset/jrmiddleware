@@ -38,11 +38,12 @@ static std::vector<int> handles;
 // size passed in 'size_of_list'.  This value will be modified
 // to equal the total number of handles with messages waiting.
 //
-JrErrorCode _stdcall JrCheckAllHandles(int* list, int& size_of_list)
+JrErrorCode _stdcall JrCheckAllHandles(int* list, int* size_of_list)
 {
     JrErrorCode ret = Ok;
     int count = 0;
     if (list == NULL) return InvalidParams;
+	if (size_of_list == NULL) return InvalidParams;
 
     // Check each known handle for outstanding messages.
     for (int i=0; i < handles.size(); i++)
@@ -50,15 +51,15 @@ JrErrorCode _stdcall JrCheckAllHandles(int* list, int& size_of_list)
         if (handles[i] == 0) continue;
         if (((JuniorMgr*) handles[i])->pending())
         {
-            if (count < size_of_list) list[count] = handles[i];
+            if (count < *size_of_list) list[count] = handles[i];
             count++;
         }
     }
 
     // If we actually have more handles with messages than 
     // the list allows us to return, mark as Overflow.
-    if (count > size_of_list) ret = Overflow;
-    size_of_list = count;
+    if (count > *size_of_list) ret = Overflow;
+    *size_of_list = count;
     return ret;
 }
 

@@ -140,7 +140,7 @@ int main(int argc, char* argv[])
     // Add TCP, if selected
     if (use_tcp)
     {
-		JUDPTransport *tcp = new JUDPTransport;
+		JTCPTransport *tcp = new JTCPTransport;
 		if (tcp != NULL)
 		{
 			if (tcp->initialize(config) != Transport::Ok)

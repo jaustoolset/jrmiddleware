@@ -31,7 +31,7 @@ extern "C" {
 
 // Define an enumerated list of error codes used by the Junior API.
 typedef enum {Ok, NoMessages, InvalidID, Overflow, InitFailed, 
-              InvalidParams, Timeout, UnknownError, NotInitialized} JrErrorCode;
+              InvalidParams, Timeout, UnknownError, NotInitialized, NoMemory} JrErrorCode;
 
 // Define the list of valid flags.  These can be logically AND'ed into
 // the "flags" field to allow for more than one flag per message.
@@ -66,7 +66,7 @@ JrErrorCode _stdcall JrBroadcast(int handle,
               int priority = 6,
 			  unsigned short msg_id = 0);
 
-JrErrorCode _stdcall JrCheckAllHandles(int* list, int& size_of_list);
+JrErrorCode _stdcall JrCheckAllHandles(int* list, int* size_of_list);
 
 JrErrorCode _stdcall JrConnect(unsigned long id, 
                                 const char* config_file, 
