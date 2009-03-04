@@ -50,6 +50,13 @@ elif os.name == "nt":
 # When building for posix-compliant systems, we need the pthread_create library
 if os.name == "posix":
    baseEnv.Append( LINKFLAGS = '-lpthread' )
+   
+# Allow the builder to statically link libraries
+static_linking = int(0)
+AddOption('--static', dest='static_linking', action='store_true') 
+if GetOption('static_linking'):
+   baseEnv.Append( LINKFLAGS = '-static' )
+   print "Static linking selected from command line..."
 
 # Export the environment to children
 Export('baseEnv')
