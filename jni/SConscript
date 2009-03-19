@@ -1,0 +1,46 @@
+# ***********************************************************************
+# * @file      SConstruct
+# * @author    Dave Martin, DeVivo AST, Inc.  
+# * @date      2008/03/03
+# *
+# * @attention Copyright (C) 2008
+# * @attention DeVivo AST, Inc.
+# * @attention All rights reserved
+# ************************************************************************
+
+# Import base environment
+import os
+Import( 'baseEnv' )
+javaEnv = baseEnv.Clone()
+
+#
+# JNI interface is not built by default.  It must be selected
+# on the command line with the '--jni' option.
+#
+if GetOption('build_jni'):
+    print "Building JNI (Java Native Interface)..."
+
+    # Add paths for Java libraries
+    javaEnv.Append(CPPPATH = 'c:\Program Files\Java\jdk1.6.0_12\include')
+    javaEnv.Append(CPPPATH = 'c:\Program Files\Java\jdk1.6.0_12\include\win32')
+ 
+    # Build the shared library and JAR file
+    jnilib = javaEnv.SharedLibrary( target = 'JrJNI',
+								source = 'JrJNI.cpp',
+								LIBS='Junior')
+    java_file1 = javaEnv.Java(target='classes', source='JrMessage.java')
+
+    #
+    # This is a hack.  I couldn't get scons to build JrMessage before
+    # JrInterface, so I forced it by modifying the builder.
+    #
+    hackEnv = javaEnv.Clone()
+    hackEnv.Append(_JAVACCOM= ' jni/JrMessage.java')
+    java_file2 = hackEnv.Java(target='classes', source='JrInterface.java')
+    hackEnv.Depends(java_file2, java_file1)
+    jnijar = hackEnv.Jar(target='JrInterface.jar', source=java_file1+java_file2)
+
+    # Publish to output directories
+    javaEnv.Install( javaEnv['INSTALL_LIBDIR'], jnilib )
+    javaEnv.Install( javaEnv['INSTALL_BINDIR'], jnijar )
+	

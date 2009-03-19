@@ -57,10 +57,17 @@ AddOption('--static', dest='static_linking', action='store_true')
 if GetOption('static_linking'):
    baseEnv.Append( LINKFLAGS = '-static' )
    print "Static linking selected from command line..."
-
+   
 # Export the environment to children
-Export('baseEnv')
-
+Export('baseEnv')   
+   
+# Define option to build JNI interface
+build_jni = int(0)
+AddOption('--jni', dest='build_jni', action='store_true') 
+   
 # Build the source tree
 SConscript('src/SConscript', build_dir='src/obj')
 SConscript('test/SConscript', build_dir='test/obj')
+SConscript('jni/Sconscript', build_dir='jni/obj')
+
+
