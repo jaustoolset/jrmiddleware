@@ -25,7 +25,6 @@
  */
 #include "JrSockets.h"
 #include "JuniorAPI.h"
-#include "Message.h"
 #include "OS.h"
 #include <stdio.h>
 #include <stdlib.h>

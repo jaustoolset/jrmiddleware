@@ -28,7 +28,7 @@
 #define __TRANSPORT_H
 
 #include <string>
-#include "Message.h"
+#include "JrMessage.h"
 #include "ConfigData.h"
 
 namespace DeVivo {

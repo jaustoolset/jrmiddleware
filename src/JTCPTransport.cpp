@@ -25,7 +25,6 @@
  */
 
 #include "JTCPTransport.h"
-#include "Message.h"
 #include "ConfigData.h"
 #include "OS.h"
 #include "JrLogger.h"

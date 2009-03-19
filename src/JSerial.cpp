@@ -25,7 +25,6 @@
  */
 
 #include "JSerial.h"
-#include "Message.h"
 #include "OS.h"
 #include "JrLogger.h"
 #include <fcntl.h>

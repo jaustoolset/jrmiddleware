@@ -25,7 +25,6 @@
  */
 
 #include "TCPConnection.h"
-#include "Message.h"
 #include "JrLogger.h"
 #include <fcntl.h>
 #include <errno.h>

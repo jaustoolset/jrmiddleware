@@ -24,7 +24,6 @@
  ************************************************************************
  */
 #include "JUDPTransport.h"
-#include "Message.h"
 #include "JUDPArchive.h"
 #include "ConfigData.h"
 #include "OS.h"
