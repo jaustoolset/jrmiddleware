@@ -1,5 +1,5 @@
 //typedef long long __int64; // needed for JNI includes...
-#include <JrJNI.h>
+#include "JrJNI.h"
 #include "JuniorAPI.h"
 
 JNIEXPORT jint JNICALL Java_DeVivo_JrInterface_JrConnect
