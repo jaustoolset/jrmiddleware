@@ -68,6 +68,6 @@ AddOption('--jni', dest='build_jni', action='store_true')
 # Build the source tree
 SConscript('src/SConscript', build_dir='src/obj')
 SConscript('test/SConscript', build_dir='test/obj')
-SConscript('jni/Sconscript', build_dir='jni/obj')
+SConscript('jni/SConscript', build_dir='jni/obj')
 
 
