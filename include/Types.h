@@ -78,6 +78,9 @@ class JAUS_ID
     unsigned long val;
     bool operator==(const JAUS_ID& in) const
     {
+		// If either is zero, return false.
+		if ((val == 0) || (in.val == 0)) return false;
+
         // Check for the easy case for computation efficiency.
         if (val == in.val) return true;
 
@@ -93,7 +96,7 @@ class JAUS_ID
 
         // Getting to this point means each byte is equivalent or
         // a wildcard.
-        return true;
+	    return true;
     }
     bool operator<(const JAUS_ID& in) const
     {

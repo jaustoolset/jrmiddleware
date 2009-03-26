@@ -37,7 +37,7 @@ JNIEXPORT jint JNICALL Java_DeVivo_JrInterface_JrSend
 {
     // Pin the pointer for the incoming data stream
     jbyte *body = env->GetByteArrayElements(data, 0);
-    printf("Sending %ld bytes to %ld\n", length, dest);
+    //printf("Sending %ld bytes to %ld\n", length, dest);
 
     // Now perform the send, freeing the pointer before we return
     int ret = ((int) JrSend(handle, dest, length, (const char*) body));
