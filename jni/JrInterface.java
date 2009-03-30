@@ -14,7 +14,6 @@ public class JrInterface {
 
     public JrInterface()
     {
-        handle = new int[1];
     }
 
     public int JrConnect(int id, String config_file_name)
@@ -42,15 +41,16 @@ public class JrInterface {
 
     public JrMessage JrReceive()
     {
-        // Create a local buffer to get the data
-        byte[] buffer = new byte[25000];
-        int[] length = new int[1]; length[0]=25000;
-        int[] source = new int[1];
+        // Reset the length, allowing Junior to write to the entire buffer
+		length[0] = MaxMsgSize;
 
         // Now call receive, returning immediately if there is nothing to do
         int ret = ((int) JrReceive(handle[0], source, length, buffer));
-        if (ret != 0) return null;
-        //System.out.printf("Got a message from %d (size=%d)\n", source[0], length[0]);
+		if (ret != 0)
+		{
+			if (ret!=1) System.out.printf("Receive message error (code=%d)\n", ret);
+			return null;
+		}
 
         // Create a JrMessage to return
         JrMessage msg = new JrMessage(length[0], buffer);
@@ -58,7 +58,11 @@ public class JrInterface {
         return msg;
     }
 
-    private int[] handle;
+	private int MaxMsgSize = 50000;
+	private int[] handle = new int[1];
+	private int[] length = new int[1];
+	private int[] source = new int[1];
+	private byte[] buffer = new byte[MaxMsgSize];
 
     // JNI interfaces...
     private native int JrConnect(int id, String filename, int[] pHandle);
