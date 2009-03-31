@@ -201,6 +201,7 @@ int main(int argc, char* argv[])
                 (msg->getMessageCode() == Connect))
             {
                 // Connection request from client.
+				JrDebug << "RTE got connection request from " << msg->getSourceId().val << std::endl;
                 Message response;
                 response.setSourceId(0);
                 response.setDestinationId(msg->getSourceId());
@@ -212,6 +213,7 @@ int main(int argc, char* argv[])
                      (msg->getMessageCode() == Cancel))
             {
                 // Disconnect client.
+				JrDebug << "RTE got disconnect request from " << msg->getSourceId().val << std::endl;
                 _clients.remove(msg->getSourceId().val);
                 publicSocket.removeDestination(msg->getSourceId());
             }

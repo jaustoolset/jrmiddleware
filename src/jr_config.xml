@@ -53,6 +53,7 @@
         MTU_Size = "4079"
         MaxAckNakRetries="3"
         AckTimeout="100"
+        ConnectionTimeout="100"
     />
 
     <!--  

@@ -459,6 +459,9 @@ JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
     config.getValue(logfile, "LogFileName", "Log_Configuration");
     int debug_level = 3;
     config.getValue(debug_level, "LogMsgLevel", "Log_Configuration");
+	int connection_timeout = 100;
+	config.getValue(connection_timeout, "ConnectionTimeout", "API_Configuration");
+	if (connection_timeout < 50) connection_timeout = 50;
 
     // Now set-up the data logger
     if (debug_level > (int) Logger::full) debug_level = (int) Logger::full;
@@ -515,11 +518,12 @@ JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
     int counter = 0;
     while (!connected)
     {
-        if (counter++ > 100)
+        if (counter++ > connection_timeout)
         {
             // timeout.
             delete mySocket;
-            JrError << "Timeout waiting for response from Run-Time Engine.\n";
+            JrError << "Timeout waiting for response from Run-Time Engine (Timeout=" <<
+				connection_timeout << ")\n";
             return Timeout;
         }
 
