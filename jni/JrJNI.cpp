@@ -1,4 +1,28 @@
-//typedef long long __int64; // needed for JNI includes...
+/*! 
+ ***********************************************************************
+ * @file      JrJNI.cpp
+ * @author    Woody English, DeVivo AST, Inc.  
+ * @date      2009/02/15
+ *
+ *  Copyright (C) 2009. DeVivo AST, Inc
+ *
+ *	This program is free software: you can redistribute it and/or modify  it 
+ *  under the terms of the Jr Middleware Open Source License which can be 
+ *  found at http://www.jrmiddleware.com/osl.html.  This program is 
+ *  distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+ *  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
+ *  PARTICULAR PURPOSE.  See the Jr Middleware Open Source License for more 
+ *  details.
+ *	
+ *  For more information, please contact DeVivo AST at info@devivoast.com
+ *  or by mail at 2225 Drake Ave, Suite 2, Huntsville, AL  35805.
+ *
+ *  The Jr Middleware Open Source License does not permit incorporating your 
+ *  program into proprietary programs. If this is what you want to do, 
+ *  use the Jr Middleware Commercial License. More information can be 
+ *  found at: http://www.jrmiddleware.com/licensing.html.
+ ************************************************************************
+ */
 #include "JrJNI.h"
 #include "JuniorAPI.h"
 
@@ -9,7 +33,7 @@ JNIEXPORT jint JNICALL Java_DeVivo_JrInterface_JrConnect
 
     // Pull config file name from character array
     const char *cfgfn = env->GetStringUTFChars( filename, 0 );
-    printf("Calling new JrConnect (id=%ld, config=%s)...\n", id, cfgfn);
+    //printf("Calling new JrConnect (id=%ld, config=%s)...\n", id, cfgfn);
 
     // Connect with the given id and config file name
     int ret = ((int) JrConnect(id, cfgfn, &handle));
@@ -28,7 +52,7 @@ JNIEXPORT jint JNICALL Java_DeVivo_JrInterface_JrConnect
 JNIEXPORT jint JNICALL Java_DeVivo_JrInterface_JrDisconnect
   (JNIEnv *, jobject, jint handle)
 {
-    printf("Calling JrDisconnect...\n");
+    //printf("Calling JrDisconnect...\n");
     return ((int) JrDisconnect(handle));
 }
 
