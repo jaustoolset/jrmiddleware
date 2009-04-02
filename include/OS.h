@@ -42,6 +42,8 @@
     #include <errno.h>
     #include <termios.h>
     #include <pthread.h>
+    #include <stdlib.h>
+    #include <cstdlib>
 #ifndef __CYGWIN__
     #include <ifaddrs.h>
 #endif
