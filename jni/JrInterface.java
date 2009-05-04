@@ -81,15 +81,15 @@ public class JrInterface {
     }
 
 	private int MaxMsgSize = 50000;
-	private int[] handle = new int[1];
+	private long[] handle = new long[1];
 	private int[] length = new int[1];
 	private int[] source = new int[1];
 	private byte[] buffer = new byte[MaxMsgSize];
 
     // JNI interfaces...
-    private native int JrConnect(int id, String filename, int[] pHandle);
-    private native int JrDisconnect(int handle);
-    private native int JrSend(int handle, int dest, int length, byte[] data);
-    private native int JrReceive(int handle, int[] source, int[] length, byte[] data);
+    private native long JrConnect(int id, String filename, long[] pHandle);
+    private native int JrDisconnect(long handle);
+	private native int JrSend(long handle, int dest, int length, byte[] data);
+	private native int JrReceive(long handle, int[] source, int[] length, byte[] data);
 
 }

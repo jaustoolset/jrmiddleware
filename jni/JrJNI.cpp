@@ -27,9 +27,9 @@
 #include "JuniorAPI.h"
 
 JNIEXPORT jint JNICALL Java_DeVivo_JrInterface_JrConnect
-  (JNIEnv *env, jobject, jint id, jstring filename, jintArray pHandle)
+  (JNIEnv *env, jobject, jint id, jstring filename, jlongArray pHandle)
 {
-    int handle;
+    long handle;
 
     // Pull config file name from character array
     const char *cfgfn = env->GetStringUTFChars( filename, 0 );
@@ -41,23 +41,23 @@ JNIEXPORT jint JNICALL Java_DeVivo_JrInterface_JrConnect
     // If successful, return the handle as an array element
     if (ret == 0)
     {
-        jint *body = env->GetIntArrayElements(pHandle, 0);
+        jlong *body = env->GetLongArrayElements(pHandle, 0);
         body[0]=handle;
         //printf("Connected with handle=%ld (%ld)\n", handle, body[0]);
-        env->ReleaseIntArrayElements(pHandle, body, 0);
+        env->ReleaseLongArrayElements(pHandle, body, 0);
     }
     return ret;
 }
 
 JNIEXPORT jint JNICALL Java_DeVivo_JrInterface_JrDisconnect
-  (JNIEnv *, jobject, jint handle)
+  (JNIEnv *, jobject, jlong handle)
 {
     //printf("Calling JrDisconnect...\n");
     return ((int) JrDisconnect(handle));
 }
 
 JNIEXPORT jint JNICALL Java_DeVivo_JrInterface_JrSend
-  (JNIEnv *env, jobject, jint handle, jint dest, jint length, jbyteArray data)
+  (JNIEnv *env, jobject, jlong handle, jint dest, jint length, jbyteArray data)
 {
     // Pin the pointer for the incoming data stream
     jbyte *body = env->GetByteArrayElements(data, 0);
@@ -71,7 +71,7 @@ JNIEXPORT jint JNICALL Java_DeVivo_JrInterface_JrSend
 
 
 JNIEXPORT jint JNICALL Java_DeVivo_JrInterface_JrReceive
-  (JNIEnv *env, jobject, jint handle, jintArray pSource, jintArray pLength, jbyteArray data)
+  (JNIEnv *env, jobject, jlong handle, jintArray pSource, jintArray pLength, jbyteArray data)
 {
     // Pin the pointer for the incoming data stream
     jbyte *body = env->GetByteArrayElements(data, 0);
@@ -80,7 +80,7 @@ JNIEXPORT jint JNICALL Java_DeVivo_JrInterface_JrReceive
     //char buffer[20000];
 
     // Now perform the receive, freeing the pointers before we return
-    int ret = ((int) JrReceive(handle, (unsigned long*) &source[0], (unsigned int*) &length[0], (char*) &body[0]));
+    int ret = ((int) JrReceive(handle, (unsigned int*) &source[0], (unsigned int*) &length[0], (char*) &body[0]));
     //if (ret == 0) printf("Got message from %ld (size=%ld)\n", source[0], length[0]);
     //fflush(stdout);
 

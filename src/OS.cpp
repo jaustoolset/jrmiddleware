@@ -100,9 +100,9 @@ unsigned long DeVivo::Junior::JrGetTimestamp()
 }
 
 // Return a list of IP addresses with all the NIC associate with this host
-std::list<unsigned long> DeVivo::Junior::JrGetIPAddresses()
+std::list<unsigned int> DeVivo::Junior::JrGetIPAddresses()
 {
-    std::list<unsigned long> addresses;
+    std::list<unsigned int> addresses;
 
 #if defined(WINDOWS) || defined(__CYGWIN__)
 

@@ -46,13 +46,13 @@ public:
     ~JuniorMgr();
 
     // The public functions mirror the API equivalents.
-    JrErrorCode sendto( unsigned long destination, unsigned int size, 
+    JrErrorCode sendto( unsigned int destination, unsigned int size, 
                 const char* buffer, int priority, int flags, MessageCode code = 0);
 
-    JrErrorCode recvfrom( unsigned long* sender, unsigned int* bufsize,
+    JrErrorCode recvfrom( unsigned int* sender, unsigned int* bufsize,
                   char* buffer, int* priority, int* flags, MessageCode* code = NULL);
     
-    JrErrorCode connect(unsigned long id, std::string config_file);
+    JrErrorCode connect(unsigned int id, std::string config_file);
 
     unsigned char pending( );
 

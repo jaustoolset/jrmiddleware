@@ -75,8 +75,8 @@ inline void TransportArchive::packHdr(Message& msg, MsgVersion version)
 		*this << (unsigned short) (msg.getDataLength()+14); // data & header
 		*this << (char) ((msg.getScaledPriority() << 6) | (msg.getBroadcast() << 4) | 
 			     (msg.getAckNakFlag() << 2) | msg.getDataControlFlagAsChar(version));
-		*this << (unsigned long) msg.getDestinationId().val;  // destination
-		*this << (unsigned long) msg.getSourceId().val;		// source
+		*this << (unsigned int) msg.getDestinationId().val;  // destination
+		*this << (unsigned int) msg.getSourceId().val;		// source
 	}
 	else
 	{
@@ -85,8 +85,8 @@ inline void TransportArchive::packHdr(Message& msg, MsgVersion version)
 			          (msg.getServiceConnection() << 6) | (msg.getExperimental() << 7)));
 		*this << (char) 2; // version
 		*this << (unsigned short) msg.getMessageCode(); // command code
-		*this << (unsigned long) msg.getDestinationId().val; // destination
-		*this << (unsigned long) msg.getSourceId().val;      // source
+		*this << (unsigned int) msg.getDestinationId().val; // destination
+		*this << (unsigned int) msg.getSourceId().val;      // source
 		*this << ((unsigned short)(msg.getDataLength() | 
 					(msg.getDataControlFlagAsChar(version)<<12)));
 		*this << (unsigned short) msg.getSequenceNumber();  // sequence number
@@ -106,7 +106,7 @@ inline void TransportArchive::packFtr( Message& msg, MsgVersion version )
 inline void TransportArchive::unpackHdr( Message& msg, MsgVersion version )
 {
 	char temp8; unsigned short temp16;
-	unsigned long temp32;
+	unsigned int temp32;
 
     // Unpack header as little endian
     setPackMode( Archive::LittleEndian );

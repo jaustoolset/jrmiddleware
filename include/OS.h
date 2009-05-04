@@ -56,7 +56,7 @@ void JrSleep(unsigned long milliseconds);
 void JrSpawnProcess(std::string path, std::string arg);
 void JrSpawnThread(void*(*func_ptr)(void*), void* func_arg);
 unsigned long JrGetTimestamp();
-std::list<unsigned long> JrGetIPAddresses();
+std::list<unsigned int> JrGetIPAddresses();
 bool JrStrCaseCompare(std::string str1, std::string str2);
 
 }} // namespace DeVivo::Junior

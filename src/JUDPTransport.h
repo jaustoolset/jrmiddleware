@@ -52,7 +52,7 @@ protected:
     IpAddressBook            _map;
     int                      _socket;
     IP_ADDRESS               _multicastAddr;
-    std::list<unsigned long> _interfaces;
+    std::list<unsigned int> _interfaces;
 	int                      _use_opc;
 
 };

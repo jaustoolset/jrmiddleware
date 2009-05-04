@@ -27,7 +27,7 @@
 #include "JuniorMgr.h"
 
 using namespace DeVivo::Junior;
-static std::vector<int> handles;
+static std::vector<long> handles;
 
 
 // This function checks all known handles for pending
@@ -38,7 +38,7 @@ static std::vector<int> handles;
 // size passed in 'size_of_list'.  This value will be modified
 // to equal the total number of handles with messages waiting.
 //
-JrErrorCode _stdcall JrCheckAllHandles(int* list, int* size_of_list)
+JrErrorCode _stdcall JrCheckAllHandles(long* list, int* size_of_list)
 {
     JrErrorCode ret = Ok;
     int count = 0;
@@ -64,8 +64,8 @@ JrErrorCode _stdcall JrCheckAllHandles(int* list, int* size_of_list)
 }
 
 
-JrErrorCode _stdcall JrSend(int handle,
-           unsigned long destination, 
+JrErrorCode _stdcall JrSend(long handle,
+           unsigned int destination, 
            unsigned int bufsize, 
            const char* buffer,
            int priority,
@@ -77,7 +77,7 @@ JrErrorCode _stdcall JrSend(int handle,
     return (mgr->sendto(destination, bufsize, buffer, priority, flags, msg_id));
 }
 
-JrErrorCode _stdcall JrBroadcast(int handle,
+JrErrorCode _stdcall JrBroadcast(long handle,
               unsigned int bufsize,
               const char* buffer,
               int priority,
@@ -86,8 +86,8 @@ JrErrorCode _stdcall JrBroadcast(int handle,
     return JrSend(handle, 0xFFFFFFFF, bufsize, buffer, priority, 0, msg_id);
 }
 
-JrErrorCode _stdcall JrReceive(int handle,
-             unsigned long* sender,
+JrErrorCode _stdcall JrReceive(long handle,
+             unsigned int* sender,
              unsigned int* bufsize,
              char* buffer,
              int* priority,
@@ -99,7 +99,7 @@ JrErrorCode _stdcall JrReceive(int handle,
     return (mgr->recvfrom(sender, bufsize, buffer, priority, flags, msg_id));
 }
 
-JrErrorCode _stdcall JrConnect(unsigned long id, const char* config_file, int* handle)
+JrErrorCode _stdcall JrConnect(unsigned int id, const char* config_file, long* handle)
 {
     if (handle == NULL) return InitFailed;
 
@@ -118,13 +118,13 @@ JrErrorCode _stdcall JrConnect(unsigned long id, const char* config_file, int* h
     }
     else
     {
-        *handle = (int)mgr;
-        handles.push_back((int) mgr);
+        *handle = (long)mgr;
+        handles.push_back((long) mgr);
     }
     return ret;
 }
 
-JrErrorCode _stdcall JrDisconnect(int handle)
+JrErrorCode _stdcall JrDisconnect(long handle)
 {    
     if (handle == 0) return NotInitialized;
     JuniorMgr* mgr = (JuniorMgr*) handle;

@@ -61,21 +61,21 @@ static MsgVersion VersionStringToEnum(std::string v)
 	return UnknownVersion;
 }
 
-// Types for JAUS_ID.  The JAUS ID is simply an unsigned long
+// Types for JAUS_ID.  The JAUS ID is simply an unsigned int
 // but has to watch out for wildcard bytes (0xFF) during
 // comparison operations.
 class JAUS_ID
 {
   public:
     JAUS_ID(){val=0;};
-    JAUS_ID(unsigned long in){val=in;}
+    JAUS_ID(unsigned int in){val=in;}
     JAUS_ID(std::string str)
     {
         std::stringstream ss; ss << str; ss >> val;
     }
     ~JAUS_ID(){}
 
-    unsigned long val;
+    unsigned int val;
     bool operator==(const JAUS_ID& in) const
     {
 		// If either is zero, return false.
@@ -154,7 +154,7 @@ class IP_ADDRESS
        return true;
    }
     
-   unsigned long addr;
+   unsigned int addr;
    unsigned short port;
 };
 

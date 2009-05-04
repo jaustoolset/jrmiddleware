@@ -81,12 +81,12 @@ int main(int argc, char* argv[])
     }
 
     // Get the local id from the command line
-    unsigned long myid;
+    unsigned int myid;
     std::stringstream s; s << argv[1];
     s >> myid;
 
     // Get the command line argument for sending a message
-    unsigned long dest = 0;
+    unsigned int dest = 0;
     if (argc > 2)
     {
         std::stringstream t; t << argv[2];
@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
     }
 
     // Get the command line argument for message size
-    unsigned long size = 0;
+    unsigned int size = 0;
     if (argc > 3)
     {
         std::stringstream u; u << argv[3];
@@ -104,7 +104,7 @@ int main(int argc, char* argv[])
 
 
     // Connect to the Run-Time Engine
-    int handle;
+    long handle;
     std::string file_path = std::string(CONFIG_PATH_NAME) + 
                             std::string("jr_config.xml");
     if (JrConnect(myid, file_path.c_str(), &handle) != Ok)
@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
     // Make a data buffer for incoming/outgoing messages.
     char buffer[MaxBufferSize];
     int counter = 0;         
-    unsigned long sender;
+    unsigned int sender;
     unsigned int datasize = size;
     int prevMsg  =0;
 

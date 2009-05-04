@@ -13,7 +13,7 @@ extern "C" {
  * Signature: (ILjava/lang/String;[I)I
  */
 JNIEXPORT jint JNICALL Java_DeVivo_JrInterface_JrConnect
-  (JNIEnv *, jobject, jint, jstring, jintArray);
+  (JNIEnv *, jobject, jint, jstring, jlongArray);
 
 /*
  * Class:     DeVivo_JrInterface
@@ -21,7 +21,7 @@ JNIEXPORT jint JNICALL Java_DeVivo_JrInterface_JrConnect
  * Signature: (I)I
  */
 JNIEXPORT jint JNICALL Java_DeVivo_JrInterface_JrDisconnect
-  (JNIEnv *, jobject, jint);
+  (JNIEnv *, jobject, jlong);
 
 /*
  * Class:     DeVivo_JrInterface
@@ -29,7 +29,7 @@ JNIEXPORT jint JNICALL Java_DeVivo_JrInterface_JrDisconnect
  * Signature: (III[B)I
  */
 JNIEXPORT jint JNICALL Java_DeVivo_JrInterface_JrSend
-  (JNIEnv *, jobject, jint, jint, jint, jbyteArray);
+  (JNIEnv *, jobject, jlong, jint, jint, jbyteArray);
 
 /*
  * Class:     DeVivo_JrInterface
@@ -37,7 +37,7 @@ JNIEXPORT jint JNICALL Java_DeVivo_JrInterface_JrSend
  * Signature: (I[I[I[B)I
  */
 JNIEXPORT jint JNICALL Java_DeVivo_JrInterface_JrReceive
-  (JNIEnv *, jobject, jint, jintArray, jintArray, jbyteArray);
+  (JNIEnv *, jobject, jlong, jintArray, jintArray, jbyteArray);
 
 #ifdef __cplusplus
 }

@@ -392,7 +392,7 @@ protected:
 			return tolower( v );
 		}
 	}
-	static void ConvertUTF32ToUTF8( unsigned long input, char* output, int* length );
+	static void ConvertUTF32ToUTF8( unsigned int input, char* output, int* length );
 
 private:
 	TiXmlBase( const TiXmlBase& );				// not implemented.

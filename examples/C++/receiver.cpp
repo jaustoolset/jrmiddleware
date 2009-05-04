@@ -30,12 +30,12 @@ int main(int argc, char* argv[])
     JrErrorCode ret;
     char buffer[MaxMsgSize]; 
     unsigned int buffersize;
-    unsigned long sender;
+    unsigned int sender;
     unsigned short msg_id;
 
     // Assign a random id
-    srand((unsigned long)(time(0)));
-    unsigned long myid = (unsigned long) rand();
+    srand((unsigned int)(time(0)));
+    unsigned int myid = (unsigned int) rand();
 
     // Initiate a connection to the Junior Run-Time Engine.
     // We need to use the returned handle in all subsequent calls.

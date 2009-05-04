@@ -243,7 +243,7 @@ bool JuniorMgr::addMsgToBuffer(Message* msg)
     return true;
 }
 
-JrErrorCode JuniorMgr::sendto( unsigned long destination, 
+JrErrorCode JuniorMgr::sendto( unsigned int destination, 
                        unsigned int size, 
                        const char* buffer,
                        int priority,
@@ -379,7 +379,7 @@ JrErrorCode JuniorMgr::sendto( unsigned long destination,
 }
 
 
-JrErrorCode JuniorMgr::recvfrom(unsigned long* sender,
+JrErrorCode JuniorMgr::recvfrom(unsigned int* sender,
                         unsigned int* bufsize,
                         char* buffer,
                         int* priority,
@@ -450,7 +450,7 @@ JrErrorCode JuniorMgr::recvfrom(unsigned long* sender,
     return NoMessages;
 }
 
-JrErrorCode JuniorMgr::connect(unsigned long id,  std::string config_file)
+JrErrorCode JuniorMgr::connect(unsigned int id,  std::string config_file)
 {
     // Parse the config file & read logger settings
     ConfigData config;

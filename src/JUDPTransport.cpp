@@ -125,7 +125,7 @@ Transport::TransportError JUDPTransport::initialize( ConfigData& config )
     // each manually.  Loop through all available addresses...
     // Get a list of IP addresses associated with this host.
     _interfaces = JrGetIPAddresses();
-    std::list<unsigned long>::iterator addy;
+    std::list<unsigned int>::iterator addy;
     for (addy = _interfaces.begin(); addy != _interfaces.end(); ++addy)
     {
         mreq.imr_interface.s_addr = *addy;
@@ -326,7 +326,7 @@ Transport::TransportError JUDPTransport::broadcastMsg(Message& msg)
     dest.sin_port = _multicastAddr.port;
 
     // Send message on all available interfaces
-    std::list<unsigned long>::iterator iter;
+    std::list<unsigned int>::iterator iter;
     for (iter = _interfaces.begin(); iter != _interfaces.end(); ++iter)
     {
         struct in_addr sockAddr;

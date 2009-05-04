@@ -93,10 +93,10 @@ static void handle_exit_signal( int signum ){			exit_flag = 1;				}
 
 /*     ----------    G L O B A L S    ------------    */
 	char		  progname[] = "jr-char1";
-    unsigned long myid;
-    unsigned long dest = 0;
-    unsigned long size = 0;
-    unsigned long test = 0;  //default = all
+    unsigned int myid;
+    unsigned int dest = 0;
+    unsigned int size = 0;
+    unsigned int test = 0;  //default = all
 
 	int totalMsgsSent		= 0;
 	int totalMsgsRcvd		= 0;
@@ -243,12 +243,12 @@ void parseCmdLine(int argc, char* argv[])
     }
 }
 /*     ----------            E C H O   M O D E            ----------     */
-void echoMode(int handle, unsigned long myid, unsigned long dest)
+void echoMode(long handle, unsigned int myid, unsigned int dest)
 {
    // Make a data buffer for incoming/outgoing messages.
     char buffer[MaxBufferSize];
     int counter = 0;         
-    unsigned long sender;
+    unsigned int sender;
     //unsigned int datasize;
     int prevMsg  =0;
 	unsigned short msg_id;
@@ -305,7 +305,7 @@ void echoMode(int handle, unsigned long myid, unsigned long dest)
     }
 }
 /*     ----------   M E S S A G E   S E N D E R    ----------     */
-JrErrorCode sender( int handle, unsigned long myid, unsigned long dest, unsigned short msg_id, unsigned int datasize, int priority, int flags)
+JrErrorCode sender( long handle, unsigned int myid, unsigned int dest, unsigned short msg_id, unsigned int datasize, int priority, int flags)
 {
 	char buffer[MaxBufferSize];  // Make a data buffer for incoming/outgoing messages.
     int counter = 0;
@@ -325,13 +325,13 @@ JrErrorCode sender( int handle, unsigned long myid, unsigned long dest, unsigned
 	return( JrSend(handle, dest, dsize, buffer, priority, flags, msg_id) );
 }
 /*     ----------   M E S S A G E   S C O R E R  ----------     */
-void score(int handle, unsigned long myid, unsigned long dest)
+void score(long handle, unsigned int myid, unsigned int dest)
 {
 	// This function needs a way to record all message numbers that have been returned so that 
 	// when a message comes out of sequence we can record it as sent, late, low priority or ...
 
 	char buffer[MaxBufferSize];  // Make a data buffer for incoming/outgoing messages.
-    unsigned long sender;
+    unsigned int sender;
 	int priority = 0, previous_priority = 0;
 
 	// check for incoming messages, loop either 100 times or exit after receipt of 4msgs
@@ -379,7 +379,7 @@ void score(int handle, unsigned long myid, unsigned long dest)
 	}
 }
 /*     ----------   C A T C H   U P   ( P U R G E   R O U N D    T R I P    L O O P )  ----------     */
-void catchUp(int handle, unsigned long myid, unsigned long dest)
+void catchUp(long handle, unsigned int myid, unsigned int dest)
 {
 	// let the echo-responder catch up
 	int Ketchup = 0; //only let the catch-up routine run N iterations
@@ -390,7 +390,7 @@ void catchUp(int handle, unsigned long myid, unsigned long dest)
 	}
 }
 /*     ----------   P R I O R I T Y   T E S T  ----------     */
-void priorityTest(int handle, unsigned long myid, unsigned long dest)
+void priorityTest(long handle, unsigned int myid, unsigned int dest)
 {		
 
     unsigned int datasize = 26;  //arbitrary, but holds the data fields necessary
@@ -421,7 +421,7 @@ void priorityTest(int handle, unsigned long myid, unsigned long dest)
 }
 
 /*     ----------   A C K  /  N A K   T E S T  ----------     */
-void acknakTest(int handle, unsigned long myid, unsigned long dest)
+void acknakTest(long handle, unsigned int myid, unsigned int dest)
 {				
     unsigned int datasize = 26;  //arbitrary, but holds the data fields necessary
 	unsigned short msg_id   = 2; 
@@ -448,7 +448,7 @@ void acknakTest(int handle, unsigned long myid, unsigned long dest)
 	catchUp(handle, myid, dest);
 }
 /*     ----------   S I M P L E   T I M E   T E S T  ----------     */
-void simpleTimeTest(int handle, unsigned long myid, unsigned long dest)
+void simpleTimeTest(long handle, unsigned int myid, unsigned int dest)
 {		
     unsigned int datasize = 26;  //arbitrary, but holds the data fields necessary
 	unsigned short msg_id   = 3; 
@@ -492,7 +492,7 @@ void simpleTimeTest(int handle, unsigned long myid, unsigned long dest)
 }
 
 /*     ----------   H A R D   T I M E   T E S T  ----------     */
-void hardTimeTest(int handle, unsigned long myid, unsigned long dest)
+void hardTimeTest(long handle, unsigned int myid, unsigned int dest)
 {		
     unsigned int datasize = 26;  //arbitrary, but holds the data fields necessary
 	unsigned short msg_id   = 4; 
@@ -548,7 +548,7 @@ int main(int argc, char* argv[])
 	parseCmdLine(argc, argv);
 
     // Connect to the JR Run-Time Engine
-    int handle;
+    long handle;
     std::string file_path = std::string(CONFIG_PATH_NAME) + 
                             std::string("jr_config.xml");
     if (JrConnect(myid, file_path.c_str(), &handle) != Ok)

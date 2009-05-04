@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
     // raw unsigned long, rather than the JAUS_ID, so that operator== means 
     // "strictly equal to".  This allows us to detected when a message is for a local
     // client, and a local client only (it contains no wildcard characters).
-	std::list<unsigned long> _clients;
+	std::list<unsigned int> _clients;
 
     // Create a list of all supported transports.
     std::list<Transport*> _transports;
