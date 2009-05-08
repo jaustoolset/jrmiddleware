@@ -66,7 +66,7 @@ JrErrorCode _stdcall JrBroadcast(long handle,
               int priority = 6,
 			  unsigned short msg_id = 0);
 
-JrErrorCode _stdcall JrCheckAllHandles(int* list, int* size_of_list);
+JrErrorCode _stdcall JrCheckAllHandles(long* list, int* size_of_list);
 
 JrErrorCode _stdcall JrConnect(unsigned int id, 
                                const char* config_file, 
