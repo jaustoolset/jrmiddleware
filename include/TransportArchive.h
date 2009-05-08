@@ -73,8 +73,8 @@ inline void TransportArchive::packHdr(Message& msg, MsgVersion version)
 	{
 		*this << (char) 0; // Message type and header compression
 		*this << (unsigned short) (msg.getDataLength()+14); // data & header
-		*this << (char) ((msg.getScaledPriority() << 6) | (msg.getBroadcast() << 4) | 
-			     (msg.getAckNakFlag() << 2) | msg.getDataControlFlagAsChar(version));
+		*this << (char) (msg.getScaledPriority() | (msg.getBroadcast() << 2) | 
+			(msg.getAckNakFlag() << 4) | (msg.getDataControlFlagAsChar(version)<<6));
 		*this << (unsigned int) msg.getDestinationId().val;  // destination
 		*this << (unsigned int) msg.getSourceId().val;		// source
 	}
@@ -119,10 +119,10 @@ inline void TransportArchive::unpackHdr( Message& msg, MsgVersion version )
 		*this >> temp16; // data size
 		if (hc_present) *this >> temp16;
 		*this >> temp8; // message properties
-		msg.setScaledPriority((temp8 & 0xC0) >> 6);
-		msg.setBroadcast((temp8 & 0x30) >> 4);
-		msg.setAckNakFlag((temp8 & 0x0C) >> 2); 
-		msg.setDataControlFlagAsChar(temp8 & 0x03, version);
+		msg.setScaledPriority(temp8 & 0x03);
+		msg.setBroadcast((temp8 & 0x0C) >> 2);
+		msg.setAckNakFlag((temp8 & 0x30) >> 4); 
+		msg.setDataControlFlagAsChar((temp8 & 0xC0)>>6, version);
 		*this >> temp32; msg.setDestinationId(JAUS_ID(temp32)); // destination
 		*this >> temp32; msg.setSourceId(JAUS_ID(temp32)); // source
 	}
