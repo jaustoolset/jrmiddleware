@@ -42,5 +42,5 @@ if GetOption('build_jni'):
 
     # Publish to output directories
     javaEnv.Install( javaEnv['INSTALL_LIBDIR'], jnilib )
-    javaEnv.Install( javaEnv['INSTALL_BINDIR'], jnijar )
+    javaEnv.Install( javaEnv['INSTALL_LIBDIR'], jnijar )
 	

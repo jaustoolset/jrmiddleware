@@ -45,11 +45,11 @@ API_Files = [
 
 # Define multiple environments for building and using
 # the library as a Shared Library (dll or so).
-dllenv = baseEnv.Copy()
+dllenv = baseEnv.Clone()
 dllenv.Append( CCFLAGS = ['-D__BUILD_DLL__'] ) 
 dllenv.Append( LINKFLAGS = ['/DEF:Junior.DEF'] )
 dllenv['SHOBJPREFIX'] = 'sh'
-ocuenv = baseEnv.Copy()
+ocuenv = baseEnv.Clone()
 ocuenv.Append( CCFLAGS = ['-D__USE_DLL__'] )                 
 
 # On Windows, we generate a DLL for the API

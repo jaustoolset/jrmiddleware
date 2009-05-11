@@ -28,7 +28,7 @@ Import( 'baseEnv' )
 
 # Define multiple environments for using the library
 # as either static or shared
-dllenv = baseEnv.Copy()
+dllenv = baseEnv.Clone()
 dllenv.Append( CCFLAGS = ['-D__USE_DLL__'] ) 
 
 # On Windows, use a DLL for the API.

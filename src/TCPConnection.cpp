@@ -122,7 +122,7 @@ Transport::TransportError JTCPConnection::recvMsg(MessageList& msglist)
 		_incoming_stream.unpack(*msg);
 
         // Make sure we record the JAUS_ID of the sender
-        if (_id == 0) _id = msg->getSourceId();
+        if (_id.val == 0) _id = msg->getSourceId();
         if (_version == UnknownVersion) 
             _version = _incoming_stream.getVersion();
 
