@@ -9,26 +9,26 @@
             ByVal handle As Int32) As Int32
     Declare Function JrBroadcast Lib "Junior.dll" ( _
             ByVal handle As Int32, _
-            ByVal msg_id As UInt16, _
-            ByVal buffer_size As UInt32, _
-            ByVal buffer() As Byte, _
-            ByVal priority As Int32) As Int32
-    Declare Function JrReceive Lib "Junior.dll" ( _
-            ByVal handle As UInt32, _
-            ByRef source As UInt32, _
-            ByRef msg_id As UInt16, _
-            ByRef buffer_size As UInt32, _
-            ByVal buffer() As Byte, _
-            ByRef priority As Int32, _
-            ByRef flags As Integer) As Int32
-    Declare Function JrSend Lib "Junior.dll" ( _
-            ByVal handle As Int32, _
-            ByVal destination As UInt32, _
-            ByVal msg_id As UInt16, _
             ByVal buffer_size As UInt32, _
             ByVal buffer() As Byte, _
             ByVal priority As Int32, _
-            ByVal flags As Int32) As Int32
+            ByVal msg_id As UInt16) As Int32
+    Declare Function JrReceive Lib "Junior.dll" ( _
+            ByVal handle As Int32, _
+            ByRef source As UInt32, _
+            ByRef buffer_size As UInt32, _
+            ByVal buffer() As Byte, _
+            ByRef priority As Int32, _
+            ByRef flags As Integer, _
+            ByRef msg_id As UInt16) As Int32
+    Declare Function JrSend Lib "Junior.dll" ( _
+            ByVal handle As Int32, _
+            ByVal destination As UInt32, _
+            ByVal buffer_size As UInt32, _
+            ByVal buffer() As Byte, _
+            ByVal priority As Int32, _
+            ByVal flags As Int32, _
+            ByVal msg_id As UInt16) As Int32
 
     'Define Class members
     Protected tHandle As Int32
@@ -67,7 +67,7 @@
     Private Sub DisconnectButton_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles DisconnectButton.Click
         ' Broadcast the disconnect message
         Dim stream(0) As Byte
-        JrBroadcast(tHandle, 3, 0, stream, 6)
+        JrBroadcast(tHandle, 0, stream, 6, 3)
 
         ' Disconnect from the RTE, reset the handle, and turn off GUI controls
         JrDisconnect(tHandle)
@@ -84,6 +84,7 @@
     Private Sub SendButton_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles SendButton.Click
         Dim ret As Integer = 0
         Dim stream(5000) As Byte
+        Dim destination As String
 
         ' If there is no message to send, return immediately.
         If OutgoingBox.TextLength = 0 Then
@@ -100,7 +101,7 @@
 
         ' For each checked destination, send the message
         For Each destination In DestinationsBox.CheckedItems
-            ret = JrSend(tHandle, tMap(destination), 2, stream.Length, stream, 6, 0)
+            ret = JrSend(tHandle, tMap(destination), stream.Length, stream, 6, 0, 2)
             If ret <> 0 Then
                 MsgBox("Failed to send to " + " (" + destination + ")")
             End If
@@ -120,7 +121,7 @@
         Dim flags As Int32
 
         ' Try to receive a message into a byte buffer
-        ret = JrReceive(tHandle, source, msg_id, bufsize, stream, priority, flags)
+        ret = JrReceive(tHandle, source, bufsize, stream, priority, flags, msg_id)
 
         ' Check for valid messages
         If ret = 1 Then
@@ -164,7 +165,7 @@
         stream = System.Text.Encoding.GetEncoding(1252).GetBytes(MyIdBox.Text)
 
         ' Broadcast to everyone.
-        ret = JrBroadcast(tHandle, 1, stream.Length, stream, 6)
+        ret = JrBroadcast(tHandle, stream.Length, stream, 6, 1)
         If ret <> 0 Then
             MsgBox("Failed to broadcast (" + ret.ToString + ")")
         End If
