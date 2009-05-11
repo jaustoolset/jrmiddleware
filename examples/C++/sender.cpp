@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
 
     // Initiate a connection to the Junior Run-Time Engine.
     // We need to use the returned handle in all subsequent calls.
-    int handle;
+    long handle;
     if (JrConnect(myid, NULL, &handle) != Ok)
     {
         printf("Init failed.  Terminating execution\n");
