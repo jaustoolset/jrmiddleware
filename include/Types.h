@@ -23,8 +23,8 @@
  *  found at: http://www.jrmiddleware.com/licensing.html.
  ************************************************************************
  */
-#ifndef __COMMON_TYPES_H
-#define __COMMON_TYPES_H
+#ifndef __JR_COMMON_TYPES_H
+#define __JR_COMMON_TYPES_H
 
 #include <string>
 #include <list>
