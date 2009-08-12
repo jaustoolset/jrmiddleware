@@ -26,6 +26,10 @@
 #ifndef  __CONFIG_DATA_H
 #define  __CONFIG_DATA_H
 
+#ifndef TIXML_USE_STL
+#define TIXML_USE_STL
+#endif
+
 #include "tinyxml.h"
 #include "JrLogger.h"
 #include "Types.h"
@@ -140,7 +144,7 @@ inline StringList ConfigData::getAttributes(std::string element)
 	// Walk through the attributes, returning a string for each
 	for (TiXmlAttribute* att = ele->FirstAttribute(); att != NULL; att = att->Next())
 	{
-		//JrDebug << "Found attribute: " << att->Name() << "\n";
+		JrDebug << "Found attribute: " << att->Name() << "\n";
 		ret.push_back(att->Name());
 	}
 	return ret;
