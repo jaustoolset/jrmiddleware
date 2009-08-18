@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <signal.h>
-#include "ConfigData.h"
+#include "XmlConfig.h"
 #include "JrSockets.h"
 #include "Transport.h"
 #include "JUDPTransport.h"
@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
     // First thing we need to do is initialize the log, but we can't
     // do that until we read in the log file name from the configuration
     // file.  So we start with opening and parsing the config file...
-    ConfigData config;
+    XmlConfig config;
     config.parseFile(config_file);
     std::string logfile;
     config.getValue(logfile, "LogFileName", "Log_Configuration");

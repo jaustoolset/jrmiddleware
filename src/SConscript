@@ -33,6 +33,7 @@ API_Files = [
     'JuniorMgr.cpp',
     'OS.cpp',
     'JrLogger.cpp',
+    'XmlConfig.cpp',
     'JUDPTransport.cpp',
     'JSerial.cpp',
     'ChecksumCRC.cpp',

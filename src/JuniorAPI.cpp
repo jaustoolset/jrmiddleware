@@ -25,6 +25,7 @@
  */
 #include "JuniorAPI.h"
 #include "JuniorMgr.h"
+#include <vector>
 
 using namespace DeVivo::Junior;
 static std::vector<long> handles;

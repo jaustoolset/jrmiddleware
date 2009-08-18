@@ -28,12 +28,19 @@
 #include <sstream>
 #include <algorithm>
 
+#ifdef SINGLE_LIB_ONLY
+#include "JUDPTransport.h"
+#else
+#include "JrSockets.h"
+#include "XmlConfig.h"
+#endif
+
 using namespace DeVivo::Junior;
 
 #define minint(a,b) ((a<b)?a:b)
 
 JuniorMgr::JuniorMgr():
-    _socket_ptr(NULL)
+    _transport(NULL)
 {
     // Initialize config data
     _message_counter = 1;
@@ -48,14 +55,16 @@ JuniorMgr::JuniorMgr():
 
 JuniorMgr::~JuniorMgr()
 {
-    if (_socket_ptr)
+    if (_transport)
     {
+#ifndef SINGLE_LIB_ONLY
         Message cancel;
         cancel.setMessageCode(Cancel);
         cancel.setSourceId(_id);
         cancel.setDestinationId(0);
-        _socket_ptr->sendMsg(cancel);
-        delete(_socket_ptr);
+        _transport->sendMsg(cancel);
+#endif
+        delete(_transport);
     }
 }
 
@@ -73,15 +82,56 @@ void JuniorMgr::sendAckMsg( Message* incoming )
     response.setSequenceNumber(incoming->getSequenceNumber());
     response.setAckNakFlag(3);
     response.setPriority(incoming->getPriority());
-    _socket_ptr->sendMsg(response);
+    _transport->sendMsg(response);
+}
+
+void JuniorMgr::sendOrBroadcast(Message& msg)
+{
+	// Normally, the Manager forward messages directly to the JuniorRTE
+	// for intelligent distribution.  When building for a single application,
+	// however, the Run-Time Engine is disabled.  Some of the intelligence
+	// must therefore be pulled into the Manager.
+#ifndef SINGLE_LIB_ONLY
+	_transport->sendMsg(msg);
+#else
+	bool matchFound = false;
+    if (!msg.getDestinationId().containsWildcards())
+    {
+        // Regular send
+        if (_transport->sendMsg(msg)!= Transport::AddrUnknown) 
+			matchFound = true;
+		else
+        {
+			// If we don't have an entry in our address book, broadcast this message.
+			// First set the ack/nak bit, though, so that if we do find the endpoint
+			// we can learn its address.
+            JrInfo << "Destination id (" << msg.getDestinationId().val <<
+                ") unknown.  Switching to broadcast.\n";
+            msg.setAckNakFlag(1);
+        }
+    }
+
+    // If the destination contains wildcards, or we didn't find
+    // a match, broadcast it.
+    if (msg.getDestinationId().containsWildcards() || !matchFound)
+    {
+        // Send this message to all recipients on all transports.
+		msg.setBroadcast(2);
+        _transport->broadcastMsg(msg);
+    }
+#endif
 }
 
 // Returns the number of messages waiting, either in a local buffer or
 // in the queue
 unsigned char JuniorMgr::pending()
 {
-    unsigned char count = _msg_count + _socket_ptr->messagesInQueue();
+#ifndef SINGLE_LIB_ONLY
+    unsigned char count = _msg_count + ((JrSocket*)_transport)->messagesInQueue();
     return (count);
+#else
+	return (_msg_count);
+#endif
 }
 
 
@@ -317,7 +367,7 @@ JrErrorCode JuniorMgr::sendto( unsigned int destination,
         }
 
         // Send the message to the RTE for distribution
-        _socket_ptr->sendMsg(msg);
+        sendOrBroadcast(msg);
         bytes_sent += payload_size;
 
 
@@ -335,7 +385,7 @@ JrErrorCode JuniorMgr::sendto( unsigned int destination,
                 JrSleep(1);
 
                 // While waiting, we need to process other messages. 
-                Transport::TransportError ret = _socket_ptr->recvMsg(msglist);
+                Transport::TransportError ret = _transport->recvMsg(msglist);
                 while (!msglist.empty())
                 {
                     Message* incoming = msglist.front();
@@ -368,7 +418,7 @@ JrErrorCode JuniorMgr::sendto( unsigned int destination,
                 if ((unsigned long)(JrGetTimestamp() - last_msg_time) > _ack_timeout)
                 {
                     if (++send_count > _max_retries) return Timeout;
-                    _socket_ptr->sendMsg(msg);
+                    sendOrBroadcast(msg);
                     last_msg_time = JrGetTimestamp();
                 }
             }
@@ -389,7 +439,7 @@ JrErrorCode JuniorMgr::recvfrom(unsigned int* sender,
         // Put the entire message in an archive, so we can 
     // Check the socket for incoming messages.  
     MessageList msglist;
-    Transport::TransportError ret = _socket_ptr->recvMsg(msglist);
+    Transport::TransportError ret = _transport->recvMsg(msglist);
 
     // Process each message in the received list
     while (!msglist.empty())
@@ -450,10 +500,50 @@ JrErrorCode JuniorMgr::recvfrom(unsigned int* sender,
     return NoMessages;
 }
 
+
+
+#ifdef SINGLE_LIB_ONLY
+// Connect() directly uses the JUDPTransport library when using a single point
+// Junior version.  This is not recommended for general use, and is intended
+// only for limited functionality targets, like handheld devices (iPhone).
+JrErrorCode JuniorMgr::connect(unsigned int id,  std::string config_file)
+{
+    // For single application, we don't use configuration files.  
+	// All parameters are pre-compiled defaults.
+    // Set-up the data logger
+    Logger::get()->setMsgLevel((enum Logger::LogMsgType) 3);
+
+    // Check for degenerate value
+    if (id == 0) 
+    {
+        JrError << "Cannot connect clients with id = 0\n";
+        return InvalidID;
+    }
+
+    // Make sure the ID doesn't contain any wildcards.
+    JAUS_ID jausId(id);
+    if (jausId.containsWildcards())
+    {
+        JrError << "Client ID may not contain wildcards (0xFF).  Returning error...\n";
+        return InvalidID;
+    }
+
+	ConfigData dummy;
+    _transport = new JUDPTransport();
+	if (_transport->initialize(dummy) != Transport::Ok) return InitFailed;
+    _id.val     = id;
+
+    return Ok;
+}
+
+#else
+
+// Connect() implementation for full Junior version that includes Run-Time Engine
+// and application-to-application message support.
 JrErrorCode JuniorMgr::connect(unsigned int id,  std::string config_file)
 {
     // Parse the config file & read logger settings
-    ConfigData config;
+    XmlConfig config;
     config.parseFile(config_file);
     std::string logfile;
     config.getValue(logfile, "LogFileName", "Log_Configuration");
@@ -547,7 +637,7 @@ JrErrorCode JuniorMgr::connect(unsigned int id,  std::string config_file)
     }
 
     // Success.  Store values
-    _socket_ptr = mySocket;
+    _transport = mySocket;
     _id.val     = id;
 
     // Initialize config data from file
@@ -564,3 +654,4 @@ JrErrorCode JuniorMgr::connect(unsigned int id,  std::string config_file)
 	}
     return Ok;
 }
+#endif

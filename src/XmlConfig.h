@@ -1,6 +1,6 @@
 /*! 
  ***********************************************************************
- * @file      ConfigData.h
+ * @file      XmlConfig.h
  * @author    Dave Martin, DeVivo AST, Inc.  
  * @date      2008/03/03
  *
@@ -23,34 +23,35 @@
  *  found at: http://www.jrmiddleware.com/licensing.html.
  ************************************************************************
  */
-#ifndef  __CONFIG_DATA_H
-#define  __CONFIG_DATA_H
+#ifndef  __XML_CONFIG_DATA_H
+#define  __XML_CONFIG_DATA_H
 
+#ifndef TIXML_USE_STL
+#define TIXML_USE_STL
+#endif
+
+#include "ConfigData.h"
+#include "tinyxml.h"
+#include "JrLogger.h"
 #include "Types.h"
 
 namespace DeVivo {
 namespace Junior {
 
-//
-// This is a default implementation that does nothing.  It is 
-// not abstract, however, since we can use the default implementation
-// to implicitly use pre-compile defaults.
-//
-class ConfigData
+
+// We use TinyXML for parsing the configure file into a DOM.
+// The XmlConfig class provides abstraction from the DOM
+// and XML, in case we switch to a different solution later.
+class XmlConfig : public ConfigData
 {
 public:
-	ConfigData(){};
-    ~ConfigData(){};
-
-    //
-    // Define an error enum
-    //
-    enum ConfigError {Ok, FileNotFound, InvalidFile, ValueNotFound};
+	XmlConfig(){};
+    ~XmlConfig(){};
 
     //
     // Functions to parse a config file
     //
-	virtual ConfigError parseFile( std::string filename ){return Ok;};
+	virtual ConfigError parseFile( std::string filename );
 
 	//
 	// Access an atribute of an element.  An optional
@@ -59,16 +60,24 @@ public:
 	virtual ConfigError getValue(std::string value,
 			  					 std::string attribute,
 								 std::string element,
-								 int index = 0){return ValueNotFound;};
+								 int index = 0);
 	virtual ConfigError getValue(int value,
 			  					 std::string attribute,
 								 std::string element,
-								 int index = 0){return ValueNotFound;};
+								 int index = 0);
 
-	// Get a list of attributes for a given element
-	virtual StringList getAttributes(std::string element){return StringList();};
+	// Get a list of attributed for a given element
+	virtual StringList getAttributes(std::string element);
 
 protected:
+
+    TiXmlDocument doc;
+
+	// Templated function to access DOM
+	template <typename T> ConfigData::ConfigError lookupValue(T& value,
+											   std::string attribute,
+											   std::string element,
+											   int index = 0);
 
 };
 

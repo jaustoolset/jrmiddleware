@@ -23,7 +23,7 @@
  *  found at: http://www.jrmiddleware.com/licensing.html.
  ************************************************************************
  */
-#include "JrSockets.h"
+#include "Transport.h"
 #include "JuniorAPI.h"
 #include "OS.h"
 #include <stdio.h>
@@ -61,6 +61,7 @@ private:
     // Define a couple of private helper functions
     unsigned int umin(unsigned int x, unsigned int y);
     void sendAckMsg(Message* source);
+	void sendOrBroadcast(Message& msg);
     bool addMsgToBuffer(Message* msg);
     void checkLargeMsgBuffer();
     bool isDuplicateMsg(Message* msg);
@@ -72,7 +73,7 @@ private:
     MessageList        _buffers[JrMaxPriority+1];
     TimeStampedMsgList _largeMsgBuffer;
     JAUS_ID            _id;
-    JrSocket*          _socket_ptr;
+    Transport*         _transport;
     unsigned short     _message_counter;
     MsgIdList          _recentMsgs;
     unsigned int       _max_retries;

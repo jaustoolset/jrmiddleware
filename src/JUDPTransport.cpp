@@ -134,7 +134,7 @@ Transport::TransportError JUDPTransport::initialize( ConfigData& config )
 			JrError << "Error joining multicast group : " << getSocketError << std::endl;
 
 		JrInfo << "Found network interface: " << 
-			inet_ntoa(*(in_addr*) &mreq.imr_interface.s_addr);
+			inet_ntoa(*(in_addr*) &mreq.imr_interface.s_addr) << std::endl;
     }
 
     // UDP sockets support run-time discovery.  It's also possible, however,
