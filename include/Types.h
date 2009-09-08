@@ -159,7 +159,7 @@ class IP_ADDRESS
 };
 
 }} // namespace DeVivo::Junior
-#endif
+#endif //__JR_COMMON_TYPES_H
 
 
 

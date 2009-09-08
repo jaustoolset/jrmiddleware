@@ -51,19 +51,39 @@ public:
     //
     // Functions to parse a config file
     //
-	virtual ConfigError parseFile( std::string filename );
+	virtual ConfigError parseFile(const std::string& filename );
 
 	//
 	// Access an atribute of an element.  An optional
 	// index can be supplied to manage duplicate elements.
 	//
-	virtual ConfigError getValue(std::string value,
-			  					 std::string attribute,
-								 std::string element,
+	virtual ConfigError getValue(std::string& value,
+			  					 const std::string& attribute,
+								 const std::string& element,
 								 int index = 0);
-	virtual ConfigError getValue(int value,
-			  					 std::string attribute,
-								 std::string element,
+	virtual ConfigError getValue(int& value,
+			  					 const std::string& attribute,
+								 const std::string& element,
+								 int index = 0);
+	virtual ConfigError getValue(unsigned int& value,
+			  					 const std::string& attribute,
+								 const std::string& element,
+								 int index = 0);
+	virtual ConfigError getValue(short& value,
+			  					 const std::string& attribute,
+								 const std::string& element,
+								 int index = 0);
+	virtual ConfigError getValue(unsigned short& value,
+			  					 const std::string& attribute,
+								 const std::string& element,
+								 int index = 0);
+	virtual ConfigError getValue(char& value,
+			  					 const std::string& attribute,
+								 const std::string& element,
+								 int index = 0);
+	virtual ConfigError getValue(unsigned char& value,
+			  					 const std::string& attribute,
+								 const std::string& element,
 								 int index = 0);
 
 	// Get a list of attributed for a given element
@@ -75,8 +95,8 @@ protected:
 
 	// Templated function to access DOM
 	template <typename T> ConfigData::ConfigError lookupValue(T& value,
-											   std::string attribute,
-											   std::string element,
+											   const std::string& attribute,
+											   const std::string& element,
 											   int index = 0);
 
 };

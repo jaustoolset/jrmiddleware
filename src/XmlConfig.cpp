@@ -27,7 +27,7 @@
 using namespace DeVivo::Junior;
 
 
-ConfigData::ConfigError XmlConfig::parseFile( std::string filename )
+ConfigData::ConfigError XmlConfig::parseFile(const  std::string& filename)
 {
 	doc.LoadFile(filename.c_str());
 	if (doc.Error())
@@ -43,26 +43,67 @@ ConfigData::ConfigError XmlConfig::parseFile( std::string filename )
 }
 
 // getValue implementations make use of templated accessor
-ConfigData::ConfigError XmlConfig::getValue(std::string value,
-			  					 std::string attribute,
-								 std::string element,
+ConfigData::ConfigError XmlConfig::getValue(std::string& value,
+			  					 const std::string& attribute,
+								 const std::string& element,
 								 int index)
 {
 	return lookupValue(value, attribute, element, index);
 }
 
-ConfigData::ConfigError XmlConfig::getValue(int value,
-			  					 std::string attribute,
-								 std::string element,
+ConfigData::ConfigError XmlConfig::getValue(int& value,
+			  					 const std::string& attribute,
+								 const std::string& element,
 								 int index)
 {
 	return lookupValue(value, attribute, element, index);
 }
+
+ConfigData::ConfigError XmlConfig::getValue(unsigned int& value,
+  					 const std::string& attribute,
+					 const std::string& element,
+					 int index)
+{
+	return lookupValue(value, attribute, element, index);
+}
+
+ConfigData::ConfigError XmlConfig::getValue(short& value,
+  					 const std::string& attribute,
+					 const std::string& element,
+					 int index)
+{
+	return lookupValue(value, attribute, element, index);
+}
+
+ConfigData::ConfigError XmlConfig::getValue(unsigned short& value,
+  					 const std::string& attribute,
+					 const std::string& element,
+					 int index)
+{
+	return lookupValue(value, attribute, element, index);
+}
+
+ConfigData::ConfigError XmlConfig::getValue(char& value,
+		  					 const std::string& attribute,
+							 const std::string& element,
+							 int index)
+{
+	return lookupValue(value, attribute, element, index);
+}
+
+ConfigData::ConfigError XmlConfig::getValue(unsigned char& value,
+		  					 const std::string& attribute,
+							 const std::string& element,
+							 int index)
+{
+	return lookupValue(value, attribute, element, index);
+}
+
 
 template <typename T> 
 ConfigData::ConfigError XmlConfig::lookupValue(T& value,
-											   std::string attribute,
-											   std::string element,
+											   const std::string& attribute,
+											   const std::string& element,
 											   int index)
 
 {

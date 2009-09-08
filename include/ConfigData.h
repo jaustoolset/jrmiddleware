@@ -56,13 +56,33 @@ public:
 	// Access an atribute of an element.  An optional
 	// index can be supplied to manage duplicate elements.
 	//
-	virtual ConfigError getValue(std::string value,
-			  					 std::string attribute,
-								 std::string element,
+	virtual ConfigError getValue(std::string& value,
+			  					 const std::string& attribute,
+								 const std::string& element,
 								 int index = 0){return ValueNotFound;};
-	virtual ConfigError getValue(int value,
-			  					 std::string attribute,
-								 std::string element,
+	virtual ConfigError getValue(int& value,
+			  					 const std::string& attribute,
+								 const std::string& element,
+								 int index = 0){return ValueNotFound;};
+	virtual ConfigError getValue(unsigned int& value,
+			  					 const std::string& attribute,
+								 const std::string& element,
+								 int index = 0){return ValueNotFound;};
+	virtual ConfigError getValue(short& value,
+			  					 const std::string& attribute,
+								 const std::string& element,
+								 int index = 0){return ValueNotFound;};
+	virtual ConfigError getValue(unsigned short& value,
+			  					 const std::string& attribute,
+								 const std::string& element,
+								 int index = 0){return ValueNotFound;};
+	virtual ConfigError getValue(char& value,
+			  					 const std::string& attribute,
+								 const std::string& element,
+								 int index = 0){return ValueNotFound;};
+	virtual ConfigError getValue(unsigned char& value,
+			  					 const std::string& attribute,
+								 const std::string& element,
 								 int index = 0){return ValueNotFound;};
 
 	// Get a list of attributes for a given element
