@@ -85,6 +85,10 @@ public:
 			  					 const std::string& attribute,
 								 const std::string& element,
 								 int index = 0);
+    virtual ConfigError getValue(double value,
+			  					 const std::string& attribute,
+								 const std::string& element,
+								 int index = 0);
 
 	// Get a list of attributed for a given element
 	virtual StringList getAttributes(std::string element);
