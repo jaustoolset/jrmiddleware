@@ -85,7 +85,7 @@ public:
 			  					 const std::string& attribute,
 								 const std::string& element,
 								 int index = 0);
-    virtual ConfigError getValue(double value,
+    virtual ConfigError getValue(double& value,
 			  					 const std::string& attribute,
 								 const std::string& element,
 								 int index = 0);
