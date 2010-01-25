@@ -12,7 +12,7 @@
     # For a complete description, including allowed value ranges,
     # please consult the Jr User's Guide.
 -->
-<JrConfigData>
+<JrXmlConfig>
     
     <!-- 
         The following settings apply for each client connection.  

@@ -6,21 +6,21 @@
  *
  *  Copyright (C) 2008. DeVivo AST, Inc
  *
- *	This program is free software: you can redistribute it and/or modify  it 
- *  under the terms of the Jr Middleware Open Source License which can be 
- *  found at http://www.jrmiddleware.com/osl.html.  This program is 
- *  distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
- *  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
- *  PARTICULAR PURPOSE.  See the Jr Middleware Open Source License for more 
- *  details.
- *	
- *  For more information, please contact DeVivo AST at info@devivoast.com
- *  or by mail at 2225 Drake Ave, Suite 2, Huntsville, AL  35805.
+ *  This file is part of Jr Middleware.
  *
- *  The Jr Middleware Open Source License does not permit incorporating your 
- *  program into proprietary programs. If this is what you want to do, 
- *  use the Jr Middleware Commercial License. More information can be 
- *  found at: http://www.jrmiddleware.com/licensing.html.
+ *  Jr Middleware is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Lesser General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  Jr Middleware is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU Lesser General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Lesser General Public License
+ *  along with Jr Middleware.  If not, see <http://www.gnu.org/licenses/>.
+ *
  ************************************************************************
  */
 #ifndef  __JR_LOGGER_H

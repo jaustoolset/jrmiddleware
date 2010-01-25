@@ -5,8 +5,21 @@
  * @date      2008/03/03
  *
  * @attention Copyright (C) 2008
- * @attention DeVivo AST, Inc.
- * @attention All rights reserved
+ *  This file is part of Jr Middleware.
+ *
+ *  Jr Middleware is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Lesser General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  Jr Middleware is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU Lesser General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Lesser General Public License
+ *  along with Jr Middleware.  If not, see <http://www.gnu.org/licenses/>.
+ *
  ************************************************************************
  */
 #include "JuniorAPI.h"
@@ -37,10 +50,14 @@ int main(int argc, char* argv[])
     srand((unsigned int)(time(0)));
     unsigned int myid = (unsigned int) rand();
 
+	// Use config file, if specified
+	const char* config_file = NULL;
+	if (argc >= 2) config_file = argv[1];
+
     // Initiate a connection to the Junior Run-Time Engine.
     // We need to use the returned handle in all subsequent calls.
     long handle;
-    if (JrConnect(myid, NULL, &handle) != Ok)
+    if (JrConnect(myid, config_file, &handle) != Ok)
     {
         printf("Init failed.  Terminating execution\n");
         return -1;
