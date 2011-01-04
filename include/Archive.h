@@ -107,21 +107,28 @@ public:
         if (( isBigHost && (pack_mode == LittleEndian)) ||
             (!isBigHost && (pack_mode == BigEndian)))
         {
-            *((T*)(data+data_length)) = swapBytes(value);
+			T tempValue = swapBytes(value);
+			memcpy( data+data_length, (void*) &tempValue, sizeof(T) );
         }
         else 
-            *((T*)(data+data_length)) = value;
+            memcpy( data+data_length, (void*) &value, sizeof(T) );
         data_length += sizeof(T);
     }
 
     // templated operator to pull data from the archive
+	// UPDATE 12/2010: ARM processors don't like pointers
+	// that span 4-byte boundaries when the data size
+	// is 4 bytes.  Switch to using memcpy.
     template<typename T> void operator>>(T& value)
     {
-        value = *((T*) (data+offset));
+		T tempValue;
+        memcpy( (void*) &tempValue, data+offset, sizeof(T));
         bool isBigHost = (htons(256) == 256);
         if (( isBigHost && (pack_mode == LittleEndian)) ||
             (!isBigHost && (pack_mode == BigEndian)))
-            value = swapBytes(value);
+            value = swapBytes(tempValue);
+		else
+			value = tempValue;
         offset += sizeof(T);
         return;
     }

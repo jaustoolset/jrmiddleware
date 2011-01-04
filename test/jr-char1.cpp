@@ -115,7 +115,7 @@ static void handle_exit_signal( int signum ){			exit_flag = 1;				}
 	double totalTime =0.0;
 
 /*     ----------     W H A T    T E S T     ----------     */
-char* whatTest(int testid)				//returns a text string description of the test identifier
+std::string whatTest(int testid)				//returns a text string description of the test identifier
 {
 	switch (testid) 	// run some tests...
 	{
@@ -145,7 +145,7 @@ void showElapsedTime()
 	endtime=GetTimestamp();
 	//printf("End time: %ld\n", endtime);
 	double elapsedTime = ((double)(endtime-starttime)/1000.0); // in seconds
-	printf("Summary: %s\n", whatTest(test)); 
+	printf("Summary: %s\n", whatTest(test).c_str()); 
 	printf(" -----------------------------------------------\n");
 	printf("    Elapsed Time            =	%2.4f seconds   ( %2.4f minutes )\n", elapsedTime, elapsedTime/60.0 );
 	printf("    Total Messages Sent     =	%ld\n", totalMsgsSent);
@@ -313,15 +313,20 @@ JrErrorCode sender( long handle, unsigned int myid, unsigned int dest, unsigned 
 
 	if (datasize < 32) dsize = 32; //must have space for the test values
 
-	*((int*)buffer) = htonl(totalMsgsSent);
-	*((unsigned int*) &buffer[4]) = htonl(dsize);
-	*((unsigned short*) &buffer[8]) = htons(msg_id);
-	*((int*) &buffer[10]) = htonl(priority);
-	*((int*) &buffer[14]) = htonl(flags);
+	int packedMsgsSent = htonl(totalMsgsSent);
+	memcpy( &buffer[0], (void*) &packedMsgsSent, 4);
+	unsigned int packedSize = htonl(dsize);
+	memcpy( &buffer[4], (void*) &packedSize, 4);
+	unsigned short packedId= htons(msg_id);
+	memcpy( &buffer[8], (void*) &packedId, 2);
+	int packedPrio = htonl(priority);
+	memcpy( &buffer[10], (void*) &packedPrio, 4);
+	int packedFlags = htonl(flags);
+	memcpy( &buffer[14], (void*) &packedFlags, 4);
 
 	DPRINTF("%ld SND: src=%ld, dest=%ld, id=%ld, size=%ld, priority=%ld, flags=%ld\n", totalMsgsSent, myid, dest, msg_id, dsize, priority, flags);
-	long sndTime=GetTimestamp();
-	*((long*) &buffer[18]) = htonl((long)sndTime);
+	long packedSndTime = htonl(GetTimestamp());
+	memcpy( &buffer[18], (void*) &packedSndTime, sizeof(long));
 	return( JrSend(handle, dest, dsize, buffer, priority, flags, msg_id) );
 }
 /*     ----------   M E S S A G E   S C O R E R  ----------     */
@@ -343,14 +348,14 @@ void score(long handle, unsigned int myid, unsigned int dest)
         if (ret == Ok)
 		{   
 			long rcvTime=(long)GetTimestamp();
-			// Pull off the data that was embedded in the message.
 
-			int msgcount = ntohl(*((int*) buffer));
-			unsigned int sbuffersize = ntohl(*((unsigned int*) &buffer[4]));
-			unsigned short smsg_id = ntohs(*((unsigned short*) &buffer[8]));
-			int spriority = ntohl(*((int*) &buffer[10]));
-			int sflags = ntohl(*((int*) &buffer[14]));
-			long sndTime = ntohl(*((long*) &buffer[18]));
+			// Pull off the data that was embedded in the message.
+			int msgcount; memcpy( (void*) &msgcount, &buffer[0], 4); msgcount = ntohl(msgcount);
+			unsigned int sbuffersize; memcpy( (void*) &sbuffersize, &buffer[4], 4); sbuffersize = ntohl(sbuffersize);
+			unsigned short smsg_id; memcpy( (void*) &smsg_id, &buffer[8], 2); smsg_id = ntohs(smsg_id);
+			int spriority; memcpy( (void*) &spriority, &buffer[10], 4); spriority = ntohl(spriority);
+			int sflags; memcpy( (void*) &sflags, &buffer[14], 4); sflags = ntohl(sflags);
+			long sndTime; memcpy( (void*) &sndTime, &buffer[18], sizeof(long)); sndTime = ntohl(sndTime);
 
 			double age = rcvTime-sndTime;
 			totalTime += age;
