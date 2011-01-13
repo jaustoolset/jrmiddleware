@@ -61,9 +61,9 @@ elif os.name == "nt":
    #baseEnv.Append( LIBPATH = [baseEnv['ENV']['SDKPATH']+"/Lib"] )
    baseEnv.Append( LINKFLAGS = ['/DEFAULTLIB:"WSock32.Lib"'] )
 
-# When building for posix-compliant systems, we need the pthread_create library
+# When building for posix-compliant systems, we need the pthread and rt libraries
 if os.name == "posix":
-   baseEnv.Append( LINKFLAGS = '-lpthread' )
+   baseEnv.Append( LINKFLAGS = ['-lpthread', '-lrt'] )
    
 # Allow the builder to statically link libraries
 static_linking = int(0)
