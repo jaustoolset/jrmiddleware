@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
 
 	// And now we can read the rest of the config file, with the benefit
 	// of logging....
-    int allowRelay = 1;
+    int allowRelay = 0;
     config.getValue(allowRelay, "AllowRelay", "RTE_Configuration");
     int delay = 1;
     config.getValue(delay ,"RTE_CycleTime", "RTE_Configuration");

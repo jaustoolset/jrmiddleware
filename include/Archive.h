@@ -208,7 +208,7 @@ public:
     }
 
     // Set the data explicitly from a raw character buffer
-    void setData( const char* buffer, unsigned short length);
+    void setData( const char* buffer, unsigned int length);
 
     // Insert and remove data in the middle of the buffer
     void insertAt( int index, Archive& archive );
@@ -224,8 +224,9 @@ public:
     enum PackMode getPackMode() { return pack_mode; }
 
     // Access the raw data for message passing
-    unsigned short getArchiveLength() { return data_length; }
-    char*          getArchive()       { return data; }
+    unsigned int getArchiveLength() { return data_length; }
+    char*        getArchive()       { return data; }
+	void		 growBuffer(unsigned int newLength);
 
     // Debugging
     void printArchive(int size);
@@ -233,19 +234,16 @@ public:
 protected:
 
     char*          data;
-    unsigned short buffer_size;
-    unsigned short data_length;
+    unsigned int buffer_size;
+    unsigned int data_length;
     int            offset;
     enum PackMode  pack_mode; 
-
-    void growBuffer(unsigned int newLength);
-
 };
 
 inline void Archive::printArchive(int size)
 {
     // get the stream from the logger
-    ostream& out = Logger::get()->getStream(Logger::full);
+    std::ostream& out = Logger::get()->getStream(Logger::full);
     JrFull << "Archive length: " << data_length << std::endl;
     JrFull << "Archive: ";
     int max_print = (size > data_length) ? data_length : size;
@@ -254,7 +252,7 @@ inline void Archive::printArchive(int size)
     out << std::endl;
 }
 
-inline void Archive::setData( const char* buffer, unsigned short length )
+inline void Archive::setData( const char* buffer, unsigned int length )
 {
     // Clear any existing data
     if (data) free(data);
@@ -302,7 +300,7 @@ inline void Archive::growBuffer(unsigned int newLength)
 
 inline void Archive::insertAt( int index, Archive& archive )
 {
-    unsigned short length = archive.getArchiveLength();
+    unsigned int length = archive.getArchiveLength();
 
     // If necessary, grow the buffer to accommodate the new data
     growBuffer(data_length + length);

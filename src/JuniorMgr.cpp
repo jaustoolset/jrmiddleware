@@ -195,10 +195,16 @@ void JuniorMgr::checkLargeMsgBuffer()
         // If this is the first message of a sequence, try to find the rest of 'em.
         if (msgIter->second->getDataControlFlag() == Message::FirstMsg)
         {
+			// In order to help out the reconstruction, we're going to keep
+			// track of the total message size.  We'll only use it if in fact
+			// this message is ready to be reconstituted.
+			int total_size = msgIter->second->getPayload().getArchiveLength();
+
             // Search the message list for the next one in the sequence.
             unsigned short msgnum = msgIter->second->getSequenceNumber();
             int msgcount = 1;
             TimeStampedMsgListIter nextMsg;
+			
 
             while (1)
             {
@@ -215,6 +221,9 @@ void JuniorMgr::checkLargeMsgBuffer()
                     break;
                 }
 
+				// Add this message to the total size
+				total_size += nextMsg->second->getPayload().getArchiveLength();
+
                 // If this message is not the last message in the sequence,
                 // continue the interior "while" loop until we find a missing
                 // message or the true end.
@@ -222,7 +231,13 @@ void JuniorMgr::checkLargeMsgBuffer()
 					continue;
 
                 // Getting to this point means we know that all the messages
-                // in a sequence are available.  Reconstruct the original message.
+                // in a sequence are available.  Before we reconstruct the original message,
+				// allocate enough space in the first message as that will be the container
+				// used for the whole thing.
+				msgIter->second->getPayload().growBuffer( total_size );
+
+				// Now we can reconstitute the message by appending the 'next' messages
+				// onto the first message's buffer...
                 for (int i=1; i < msgcount; i++)
                 {
                     nextMsg = searchMsgList(_largeMsgBuffer,
