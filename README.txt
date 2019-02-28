@@ -1,9 +1,6 @@
 
 Thank you for your interest in the "Jr" middleware API offered by DeVivo AST, Inc.
-As noted above, Jr is offered under a Lesser GPL License.  Please read the license
-agreement carefully before using Jr in commercial or proprietary systems, as
-DeVivo does not waive its legal right to enforce this license.
-
+As noted above, Jr is offered under a BSD License.  
 
 User documentation is available in the documentation directory as "Jr User's Guide.pdf".
 Limited design documentation is also available, and the source code is heavily

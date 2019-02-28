@@ -1,12 +1,34 @@
-# ***********************************************************************
-# * @file      SConstruct
-# * @author    Dave Martin, DeVivo AST, Inc.  
-# * @date      2009/02/15
-# *
-# * @attention Copyright (C) 2009
-# * @attention DeVivo AST, Inc.
-# * @attention All rights reserved
-# ************************************************************************
+#***********           LICENSE HEADER   *******************************
+# JR Middleware
+# Copyright (c)  2008-2019, DeVivo AST, Inc
+# All rights reserved.
+# 
+# Redistribution and use in source and binary forms, with or without 
+# modification, are permitted provided that the following conditions are met:
+# 
+#        Redistributions of source code must retain the above copyright notice, 
+# this list of conditions and the following disclaimer.
+# 
+#        Redistributions in binary form must reproduce the above copyright 
+# notice, this list of conditions and the following disclaimer in the 
+# documentation and/or other materials provided with the distribution.
+# 
+#        Neither the name of the copyright holder nor the names of 
+# its contributors may be used to endorse or promote products derived from 
+# this software without specific prior written permission.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE 
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+# POSSIBILITY OF SUCH DAMAGE.
+# *********************  END OF LICENSE ***********************************
 
 # Import base environment
 import os
@@ -18,16 +40,17 @@ javaEnv = baseEnv.Clone()
 # on the command line with the '--jni' option.
 #
 if GetOption('build_jni'):
-    print "Building JNI (Java Native Interface)..."
+    print(  "Building JNI (Java Native Interface)..." )
 
     # Add paths for Java libraries
-    javaEnv.Append(CPPPATH = 'c:\Program Files\Java\jdk1.6.0_12\include')
-    javaEnv.Append(CPPPATH = 'c:\Program Files\Java\jdk1.6.0_12\include\win32')
+    javaEnv.Append(CPPPATH = os.environ['JAVA_HOME']+'/include')
+    javaEnv.Append(CPPPATH = os.environ['JAVA_HOME']+'/include/win32')
+    javaEnv.Append(CPPPATH = os.environ['JAVA_HOME']+'/include/linux')
  
     # Build the shared library and JAR file
     jnilib = javaEnv.SharedLibrary( target = 'JrJNI',
 								source = 'JrJNI.cpp',
-								LIBS='Junior')
+								LIBS = ['Junior', baseEnv[ 'extra_libs' ]] )
     java_file1 = javaEnv.Java(target='classes', source='JrMessage.java')
 
     #
